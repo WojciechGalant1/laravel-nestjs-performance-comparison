@@ -1,0 +1,125 @@
+# One application stack at a time, so both never compete for the same vCPUs:
+#   docker compose --profile laravel up -d --build
+#   docker compose --profile nestjs up -d --build
+# Database setup: scripts/db-setup.sh (uses the "setup" profile).
+
+name: benchmark
+
+x-db-env: &db-env
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_USERNAME: ${DB_USERNAME:-postgres}
+  DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+
+x-jwt-env: &jwt-env
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+  JWT_ALGO: HS256
+  JWT_TTL: ${JWT_TTL:-3600}
+
+x-laravel-env: &laravel-env
+  <<: [*db-env, *jwt-env]
+  APP_KEY: ${APP_KEY:?set APP_KEY in .env}
+  APP_ENV: production
+  APP_DEBUG: "false"
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: warning
+  DB_DATABASE: laravel_app
+  CACHE_STORE: array
+  SESSION_DRIVER: array
+  QUEUE_CONNECTION: sync
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: laravel_app
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    cpus: ${DB_CPUS:-4}
+    mem_limit: ${DB_MEMORY:-2g}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d laravel_app"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  laravel-app:
+    profiles: [laravel]
+    build:
+      context: ./apps/laravel-app
+      target: app
+    environment: *laravel-env
+    cpus: ${APP_CPUS:-4}
+    mem_limit: ${APP_MEMORY:-2g}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  laravel-nginx:
+    profiles: [laravel]
+    image: nginx:1.25
+    volumes:
+      - ./apps/nginx/laravel.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8080:80"
+    cpus: ${NGINX_CPUS:-1}
+    mem_limit: ${NGINX_MEMORY:-256m}
+    depends_on:
+      - laravel-app
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/up"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Migrations and seeding only (require-dev with Faker); not part of the measured stack.
+  laravel-tools:
+    profiles: [setup]
+    build:
+      context: ./apps/laravel-app
+      target: tools
+    environment:
+      <<: *laravel-env
+      APP_ENV: local
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  nestjs-app:
+    profiles: [nestjs]
+    build:
+      context: ./apps/nestjs-app
+    environment:
+      <<: [*db-env, *jwt-env]
+      NODE_ENV: production
+      PORT: 3000
+      DB_DATABASE: nestjs_app
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+    cpus: ${APP_CPUS:-4}
+    mem_limit: ${APP_MEMORY:-2g}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  nestjs-nginx:
+    profiles: [nestjs]
+    image: nginx:1.25
+    volumes:
+      - ./apps/nginx/nestjs.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8081:80"
+    cpus: ${NGINX_CPUS:-1}
+    mem_limit: ${NGINX_MEMORY:-256m}
+    depends_on:
+      - nestjs-app
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
