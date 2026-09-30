@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Restore working databases from their templates.
-# Run before every scenario repetition so EP7/EP9 mutations are wiped.
+# Restore working databases from their templates and restart the application
+# containers, as required before every scenario repetition: the reset wipes the
+# EP7/EP9 mutations and the restart clears in-process state (OPcache/JIT and V8
+# warm-up, connection pools), so each repetition starts from the same point.
 #
 # Usage: scripts/db-reset.sh [laravel|nestjs|both]   (default: both)
 set -euo pipefail
@@ -25,5 +27,34 @@ DROP DATABASE IF EXISTS ${name};
 CREATE DATABASE ${name} TEMPLATE ${name}_template;
 SQL
 done
+
+# Only restarts what is already running, so resetting "both" works while a single
+# stack is up (the normal case during a measurement).
+restart_stack() {
+    local profile="$1" app="$2" nginx="$3"
+
+    if [ -z "$(docker compose ps -q --status running "$app")" ]; then
+        return 0
+    fi
+
+    echo "Restarting ${app} ..."
+    docker compose --profile "$profile" restart "$app" >/dev/null
+    # --no-recreate: this step only waits for the healthchecks, it must not
+    # rebuild or replace containers in the middle of a measurement series.
+    docker compose --profile "$profile" up -d --wait --no-recreate "$app" "$nginx" >/dev/null
+}
+
+for name in "${names[@]}"; do
+    case "$name" in
+        laravel_app) restart_stack laravel laravel-app laravel-nginx ;;
+        nestjs_app) restart_stack nestjs nestjs-app nestjs-nginx ;;
+    esac
+done
+
+if [ -n "$(docker compose ps -q --status running laravel-app)" ] \
+    && [ -n "$(docker compose ps -q --status running nestjs-app)" ]; then
+    echo "WARNING: both application stacks are running; they share the same CPUs." >&2
+    echo "Stop the one you are not measuring: docker compose stop <stack>-app <stack>-nginx" >&2
+fi
 
 echo "Reset complete."

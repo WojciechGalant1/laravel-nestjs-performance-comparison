@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -23,6 +24,9 @@ class RestaurantSeeder extends Seeder
 
     private string $now;
 
+    /** Unix timestamp of the frozen reference date the whole dataset is anchored to. */
+    private int $referenceTs;
+
     /** @var string[] */
     private array $namePool = [];
 
@@ -32,7 +36,13 @@ class RestaurantSeeder extends Seeder
         fake()->seed(self::SEED);
 
         DB::connection()->disableQueryLog();
-        $this->now = now()->toDateTimeString();
+
+        // Anchor every generated date to the benchmark reference date instead of
+        // the wall clock, so the dataset is identical no matter when it is seeded
+        // and the EP6 window always covers the same rows.
+        $reference = Carbon::parse(config('benchmark.now'), 'UTC');
+        $this->referenceTs = $reference->getTimestamp();
+        $this->now = $reference->toDateTimeString();
 
         // Reset to a known empty state with sequences restarting at 1, so that
         // generated foreign keys can rely on deterministic serial ids.
@@ -204,7 +214,7 @@ class RestaurantSeeder extends Seeder
     private function seedOrders(array $prices): void
     {
         $itemStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
-        $nowTs = time();
+        $nowTs = $this->referenceTs;
         $ninetyDays = 90 * 86400;
 
         $orders = [];
@@ -277,7 +287,7 @@ class RestaurantSeeder extends Seeder
     {
         $slotTimes = ['12:00:00', '14:00:00', '16:00:00', '18:00:00', '20:00:00'];
         $slotsPerDay = count($slotTimes);
-        $baseDate = strtotime('today') - 50 * 86400;
+        $baseDate = $this->referenceTs - 50 * 86400;
         $statuses = ['pending', 'confirmed', 'cancelled'];
 
         $rows = [];

@@ -17,8 +17,11 @@ x-jwt-env: &jwt-env
   JWT_ALGO: HS256
   JWT_TTL: ${JWT_TTL:-3600}
 
+x-bench-env: &bench-env
+  BENCH_NOW: ${BENCH_NOW:-2026-09-01 00:00:00}
+
 x-laravel-env: &laravel-env
-  <<: [*db-env, *jwt-env]
+  <<: [*db-env, *jwt-env, *bench-env]
   APP_KEY: ${APP_KEY:?set APP_KEY in .env}
   APP_ENV: production
   APP_DEBUG: "false"
@@ -32,6 +35,21 @@ x-laravel-env: &laravel-env
 services:
   postgres:
     image: postgres:16-bookworm
+    # Server settings are pinned explicitly (these are the PostgreSQL 16 defaults)
+    # so an image update cannot silently change them, and so the connection ceiling
+    # is a documented value: it is well above the 40 connections NestJS can open
+    # (4 workers x DB_POOL_SIZE) and the 4 of PHP-FPM, which rules out the
+    # connection limit as a cause of saturation in S2.
+    command:
+      - postgres
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - effective_cache_size=4GB
     environment:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
@@ -93,7 +111,7 @@ services:
     build:
       context: ./apps/nestjs-app
     environment:
-      <<: [*db-env, *jwt-env]
+      <<: [*db-env, *jwt-env, *bench-env]
       NODE_ENV: production
       PORT: 3000
       DB_DATABASE: nestjs_app
