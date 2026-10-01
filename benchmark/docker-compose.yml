@@ -142,13 +142,13 @@ services:
   # Load generator (scripts/run-scenario.sh). Deliberately without cpus/mem_limit:
   # it runs on the host cores outside the application budget, and it reaches the
   # stacks by service name on the Compose network, bypassing the Docker Desktop /
-  # WSL port forwarding.
+  # WSL port forwarding. The 4 GB heap keeps 1000 threads (S2) out of GC pauses.
   jmeter:
     profiles: [loadtest]
     build:
       context: ./jmeter
     environment:
-      HEAP: "-Xms1g -Xmx2g"
+      HEAP: "-Xms2g -Xmx4g"
     volumes:
       - ./jmeter:/tests:ro
       - ./results:/results

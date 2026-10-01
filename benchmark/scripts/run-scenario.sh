@@ -12,6 +12,9 @@
 # Environment (defaults follow the methodology):
 #   MODE=isolated|mixed   isolated: one run per endpoint; mixed: all endpoints in one run
 #   ENDPOINTS="EP1 EP2 EP8" USERS="10 50" REPS=10 WARMUP=120 DURATION=180 RAMPUP=10
+#   S2 defaults: ENDPOINTS="EP3 EP7 EP9" USERS="10 50 100 200 500 1000"
+#   S3 defaults: ENDPOINTS="EP4 EP5 EP6" USERS="50 200"
+#   DB_POOL_SIZE=1   NestJS control run; results go to results/s2-pool1/ instead of results/s2/
 #
 # Output: results/<scenario>/<framework>/<endpoint>/vu<N>/rep<NN>/
 #   results.jtl, jmeter.log, warmup.log, stats.csv, meta.json
@@ -33,13 +36,15 @@ case "$framework" in
 esac
 
 case "$scenario" in
-    s1) default_endpoints="EP1 EP2 EP8" ;;
+    s1) default_endpoints="EP1 EP2 EP8"; default_users="10 50" ;;
+    s2) default_endpoints="EP3 EP7 EP9"; default_users="10 50 100 200 500 1000" ;;
+    s3) default_endpoints="EP4 EP5 EP6"; default_users="50 200" ;;
     *) echo "Unknown scenario: ${scenario} (no jmeter/${scenario}.jmx defaults)" >&2; exit 1 ;;
 esac
 
 MODE="${MODE:-isolated}"
 ENDPOINTS="${ENDPOINTS:-$default_endpoints}"
-USERS="${USERS:-10 50}"
+USERS="${USERS:-$default_users}"
 REPS="${REPS:-10}"
 WARMUP="${WARMUP:-120}"
 DURATION="${DURATION:-180}"
@@ -74,6 +79,43 @@ if running "$other"; then
 fi
 
 docker compose --profile loadtest build -q jmeter
+
+# NestJS reads DB_POOL_SIZE at process start. Align the running container with the
+# requested value (default 10) so a control run cannot leak into the next series.
+# A non-default pool is written to its own directory: results/s2-pool<N>/.
+desired_pool="${DB_POOL_SIZE:-10}"
+out_name="$scenario"
+if [ "$framework" = nestjs ]; then
+    actual_pool=$(docker compose exec -T nestjs-app printenv DB_POOL_SIZE)
+    if [ "$actual_pool" != "$desired_pool" ]; then
+        echo "Recreating nestjs-app with DB_POOL_SIZE=${desired_pool} (container has ${actual_pool})"
+        DB_POOL_SIZE="$desired_pool" docker compose --profile nestjs up -d --force-recreate --no-deps nestjs-app >/dev/null
+        actual_pool=$(docker compose exec -T nestjs-app printenv DB_POOL_SIZE)
+        if [ "$actual_pool" != "$desired_pool" ]; then
+            echo "nestjs-app still has DB_POOL_SIZE=${actual_pool}, expected ${desired_pool}" >&2
+            exit 1
+        fi
+    fi
+    if [ "$scenario" = s2 ] && [ "$desired_pool" != 10 ]; then
+        out_name="s2-pool${desired_pool}"
+    fi
+fi
+
+# Same rule as scripts/jmeter-data.sh: the day after the last seeded reservation,
+# or today (UTC, postgres container) when that day is already in the past.
+# Passed with -J so a ranges.properties generated earlier cannot go stale.
+ep9_start=""
+if [ "$scenario" = s2 ]; then
+    max_reservation=$(docker compose exec -T postgres sh -c \
+        'psql -U "$POSTGRES_USER" -d laravel_app_template -v ON_ERROR_STOP=1 -X -q -A -t -c "SELECT MAX(reservation_date) FROM reservations"')
+    max_reservation="${max_reservation//[[:space:]]/}"
+    today=$(docker compose exec -T postgres date -u +%F)
+    today="${today//$'\r'/}"
+    ep9_start=$(date -u -d "${max_reservation} + 1 day" +%F)
+    if [[ "$ep9_start" < "$today" ]]; then
+        ep9_start="$today"
+    fi
+fi
 
 jmeter() {
     docker compose --profile loadtest run --rm -T --no-deps jmeter \
@@ -136,10 +178,21 @@ total=$(( ${#endpoints[@]} * ${#users[@]} * REPS ))
 per_run=$(( WARMUP + DURATION + 30 ))
 done_runs=0
 
+# Warm-up and measurement are separate JMeter processes on the same database, so
+# EP9's slot counter would otherwise start at zero twice and the measurement would
+# collide with reservations created during warm-up. 100000000 slots is about 28
+# years further along the 200 x 48 grid.
+warmup_ep9=()
+measure_ep9=()
+if [ "$scenario" = s2 ]; then
+    warmup_ep9=(-Jep9.start="$ep9_start" -Jep9.offset=0)
+    measure_ep9=(-Jep9.start="$ep9_start" -Jep9.offset=100000000)
+fi
+
 for ep in "${endpoints[@]}"; do
     for vu in "${users[@]}"; do
         for rep in $(seq 1 "$REPS"); do
-            rel="${scenario}/${framework}/${ep}/vu${vu}/rep$(printf '%02d' "$rep")"
+            rel="${out_name}/${framework}/${ep}/vu${vu}/rep$(printf '%02d' "$rep")"
             dir="results/${rel}"
             container_dir="/results/${rel}"
             done_runs=$((done_runs + 1))
@@ -148,8 +201,9 @@ for ep in "${endpoints[@]}"; do
                 # not be counted as the first repetition of a real series.
                 if ! grep -q "\"warmup_s\": ${WARMUP}," "${dir}/meta.json" \
                     || ! grep -q "\"duration_s\": ${DURATION}," "${dir}/meta.json" \
-                    || ! grep -q "\"rampup_s\": ${RAMPUP}," "${dir}/meta.json"; then
-                    echo "${dir} holds a run with different WARMUP/DURATION/RAMPUP; move it away first." >&2
+                    || ! grep -q "\"rampup_s\": ${RAMPUP}," "${dir}/meta.json" \
+                    || ! grep -q "\"db_pool_size\": \"${pool_size}\"," "${dir}/meta.json"; then
+                    echo "${dir} holds a run with different WARMUP/DURATION/RAMPUP or DB_POOL_SIZE; move it away first." >&2
                     exit 1
                 fi
                 echo "[${done_runs}/${total}] ${dir}: already complete, skipped"
@@ -158,11 +212,12 @@ for ep in "${endpoints[@]}"; do
             rm -rf "$dir" && mkdir -p "$dir"
 
             eta=$(( (total - done_runs + 1) * per_run / 60 ))
-            echo "[${done_runs}/${total}] ${framework} ${scenario} ${ep} vu=${vu} rep=${rep} (about ${eta} min left)"
+            echo "[${done_runs}/${total}] ${framework} ${out_name} ${ep} vu=${vu} rep=${rep} (about ${eta} min left)"
 
             scripts/db-reset.sh "$framework" >/dev/null
 
             jmeter -Jendpoint="$ep" -Jusers="$vu" -Jduration="$WARMUP" \
+                "${warmup_ep9[@]}" \
                 -j "${container_dir}/warmup.log" >/dev/null
 
             offset=$(clock_offset)
@@ -170,6 +225,7 @@ for ep in "${endpoints[@]}"; do
             started="$EPOCHREALTIME"
             status=complete
             jmeter -Jendpoint="$ep" -Jusers="$vu" -Jduration="$DURATION" \
+                "${measure_ep9[@]}" \
                 -l "${container_dir}/results.jtl" -j "${container_dir}/jmeter.log" >/dev/null || status=failed
             finished="$EPOCHREALTIME"
             stop_stats
@@ -207,4 +263,4 @@ EOF
     done
 done
 
-echo "Done: results/${scenario}/${framework}"
+echo "Done: results/${out_name}/${framework}"

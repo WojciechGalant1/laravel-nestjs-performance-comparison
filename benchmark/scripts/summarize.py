@@ -5,7 +5,11 @@ Usage: python3 scripts/summarize.py <scenario>          e.g. ... s1
 
 Writes results/<scenario>/runs.csv (one row per repetition and endpoint label) and
 results/<scenario>/summary.csv (median and standard deviation across repetitions),
-and for S1 prints the H1 verification table.
+and for S1 prints the H1 verification table. For S2 (and s2-poolN control
+runs) it prints the H2 table: saturation, the p95 slope over the full VU range and
+over the linear region below the earlier saturation point, and the H2 verdict. For S3 it
+prints the H3 table: p95 per endpoint, and |dp95(EP4)| / |dp95(EP1)| against the
+S1 baseline at the same mode and VU (n/d when that EP1 run is absent).
 
 Definitions (Sections 3.3, 3.5 and 3.6 of the methodology):
 - The ramp-up is excluded: the steady-state window starts rampup_s after the first
@@ -31,6 +35,7 @@ ROOT = Path(__file__).resolve().parent.parent / "results"
 SETUP_LABELS = {"SETUP_login"}
 H1_LIMIT_PCT = 15.0
 H1_ERROR_LIMIT_PCT = 1.0
+H2_SATURATION_PCT = 5.0
 
 UNITS = {
     "B": 1 / 1024**2, "KiB": 1 / 1024, "MiB": 1, "GiB": 1024,
@@ -193,6 +198,131 @@ def h1_table(summary):
               f"{drps:>7.1f} {err_l:>7.2f} {err_n:>7.2f}  {'holds' if holds else 'rejected'}")
 
 
+def slope(points):
+    """Least-squares slope of p95 (ms) against VU. None when fewer than two points."""
+    if len(points) < 2:
+        return None
+    xs = [vu for vu, _ in points]
+    ys = [p95 for _, p95 in points]
+    mean_x = sum(xs) / len(xs)
+    mean_y = sum(ys) / len(ys)
+    denom = sum((x - mean_x) ** 2 for x in xs)
+    if denom == 0:
+        return None
+    return sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys)) / denom
+
+
+def saturation_vu(by_vu):
+    """Smallest VU whose median error rate exceeds 5%, or None when none does."""
+    for vu in sorted(by_vu):
+        if by_vu[vu]["error_rate_pct_median"] > H2_SATURATION_PCT:
+            return vu
+    return None
+
+
+def h2_table(summary):
+    index = {(r["mode"], r["endpoint"], int(r["users"]), r["framework"]): r for r in summary}
+    groups = sorted({(mode, endpoint) for mode, endpoint, _, _ in index})
+    print(f"\nH2: NestJS slope below saturation < Laravel; NestJS error rate lower at VU >= 500; "
+          f"saturation (error > {H2_SATURATION_PCT:g}%) at a higher VU")
+    header = f"{'mode':9} {'endpoint':8} {'VU':>5} {'p95 L':>8} {'p95 N':>8} {'err L%':>7} {'err N%':>7}"
+    print(header)
+    print("-" * len(header))
+    for mode, endpoint in groups:
+        vus = sorted(
+            vu for (m, e, vu, framework) in index
+            if m == mode and e == endpoint and framework == "laravel"
+            and (mode, endpoint, vu, "nestjs") in index
+        )
+        if not vus:
+            print(f"{mode:9} {endpoint:8}        (no paired results yet)")
+            continue
+        lar = {vu: index[(mode, endpoint, vu, "laravel")] for vu in vus}
+        nest = {vu: index[(mode, endpoint, vu, "nestjs")] for vu in vus}
+        for vu in vus:
+            print(f"{mode:9} {endpoint:8} {vu:>5} {lar[vu]['p95_ms_median']:>8.1f} "
+                  f"{nest[vu]['p95_ms_median']:>8.1f} {lar[vu]['error_rate_pct_median']:>7.2f} "
+                  f"{nest[vu]['error_rate_pct_median']:>7.2f}")
+
+        full = [(vu, lar[vu]["p95_ms_median"], nest[vu]["p95_ms_median"]) for vu in vus]
+        sat_l, sat_n = saturation_vu(lar), saturation_vu(nest)
+        # Same VU set for both frameworks: strictly below whichever saturates first.
+        # No saturation on either side leaves the linear region equal to the full range.
+        cut = min((s for s in (sat_l, sat_n) if s is not None), default=None)
+        linear = [p for p in full if cut is None or p[0] < cut]
+        slope_l = slope([(vu, p95) for vu, p95, _ in linear])
+        slope_n = slope([(vu, p95) for vu, _, p95 in linear])
+        full_l = slope([(vu, p95) for vu, p95, _ in full])
+        full_n = slope([(vu, p95) for vu, _, p95 in full])
+
+        high = [vu for vu in vus if vu >= 500]
+        err_holds = bool(high) and all(nest[vu]["error_rate_pct_median"] < lar[vu]["error_rate_pct_median"] for vu in high)
+        slope_holds = slope_l is not None and slope_n is not None and slope_n < slope_l
+        # No observed saturation ranks above every finite VU, so a framework that
+        # stays under 5% out to the top of the range saturates later.
+        rank = lambda s: math.inf if s is None else s
+        sat_holds = rank(sat_n) > rank(sat_l)
+        holds = slope_holds and err_holds and sat_holds
+
+        def fmt_slope(value):
+            return "n/d" if value is None else f"{value:.4f}"
+
+        def fmt_sat(value):
+            return "brak" if value is None else str(value)
+
+        print(f"         slope full {fmt_slope(full_l)} / {fmt_slope(full_n)} ms/VU (L/N), "
+              f"linear {fmt_slope(slope_l)} / {fmt_slope(slope_n)}, "
+              f"saturation {fmt_sat(sat_l)} / {fmt_sat(sat_n)}  "
+              f"{'holds' if holds else 'rejected'}")
+
+
+def ep1_baseline():
+    """Median p95 of isolated/mixed EP1 from results/s1/summary.csv, if that series exists."""
+    path = ROOT / "s1" / "summary.csv"
+    if not path.exists():
+        return {}
+    baseline = {}
+    with path.open(newline="") as fh:
+        for row in csv.DictReader(fh):
+            if row.get("endpoint") != "EP1":
+                continue
+            baseline[(row["mode"], row["framework"], int(float(row["users"])))] = float(row["p95_ms_median"])
+    return baseline
+
+
+def h3_table(summary):
+    baseline = ep1_baseline()
+    index = {(r["mode"], r["endpoint"], int(r["users"]), r["framework"]): r for r in summary}
+    print("\nH3: |dp95(EP4)| / |dp95(EP1)| > 2 at the same mode and VU "
+          "(EP1 median from results/s1/summary.csv)")
+    header = (f"{'mode':9} {'endpoint':8} {'VU':>5} {'p95 L':>8} {'p95 N':>8} {'dp95%':>7} "
+              f"{'err L%':>7} {'err N%':>7}  H3")
+    print(header)
+    print("-" * len(header))
+    for (mode, endpoint, users, framework), lar in sorted(index.items()):
+        if framework != "laravel":
+            continue
+        nest = index.get((mode, endpoint, users, "nestjs"))
+        if nest is None:
+            print(f"{mode:9} {endpoint:8} {users:>5}  (no NestJS results yet)")
+            continue
+        dp95 = rel_delta_pct(lar["p95_ms_median"], nest["p95_ms_median"])
+        err_l, err_n = lar["error_rate_pct_median"], nest["error_rate_pct_median"]
+        verdict = ""
+        if endpoint == "EP4":
+            ep1_l = baseline.get((mode, "laravel", users))
+            ep1_n = baseline.get((mode, "nestjs", users))
+            if ep1_l is None or ep1_n is None:
+                verdict = "n/d"
+            else:
+                base = rel_delta_pct(ep1_l, ep1_n)
+                ratio = math.inf if base == 0 and dp95 > 0 else (0.0 if base == 0 else dp95 / base)
+                shown = "inf" if ratio == math.inf else f"{ratio:.2f}"
+                verdict = f"{shown} {'holds' if ratio > 2 else 'rejected'}"
+        print(f"{mode:9} {endpoint:8} {users:>5} {lar['p95_ms_median']:>8.1f} {nest['p95_ms_median']:>8.1f} "
+              f"{dp95:>7.1f} {err_l:>7.2f} {err_n:>7.2f}  {verdict}")
+
+
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__.split("\n\n")[1])
@@ -210,8 +340,13 @@ def main():
     print(f"{len(rows)} run rows -> {scenario_dir / 'runs.csv'}")
     print(f"{len(summary)} groups -> {scenario_dir / 'summary.csv'}")
 
-    if sys.argv[1] == "s1":
+    name = sys.argv[1]
+    if name == "s1":
         h1_table(summary)
+    elif name == "s2" or name.startswith("s2-pool"):
+        h2_table(summary)
+    elif name == "s3":
+        h3_table(summary)
 
 
 if __name__ == "__main__":
