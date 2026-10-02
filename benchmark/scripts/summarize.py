@@ -6,10 +6,12 @@ Usage: python3 scripts/summarize.py <scenario>          e.g. ... s1
 Writes results/<scenario>/runs.csv (one row per repetition and endpoint label) and
 results/<scenario>/summary.csv (median and standard deviation across repetitions),
 and for S1 prints the H1 verification table. For S2 (and s2-poolN control
-runs) it prints the H2 table: saturation, the p95 slope over the full VU range and
-over the linear region below the earlier saturation point, and the H2 verdict. For S3 it
-prints the H3 table: p95 per endpoint, and |dp95(EP4)| / |dp95(EP1)| against the
-S1 baseline at the same mode and VU (n/d when that EP1 run is absent).
+runs) it prints the H2 table. The verdict slope is p95 against VU, after dropping
+levels below 200 and levels at or above saturation; p99 is printed beside it and
+is not part of the fit. The full-range slope is printed and does not decide H2. For S3 it
+prints the H3 table. The ratio |dp95(EP4)| / |dp95(EP1)| is evaluated only at
+50 VU, against the S1 baseline. At every other concurrency, EP4–EP6 are printed
+as an observation (p95, throughput, error rate) with no ratio.
 
 Definitions (Sections 3.3, 3.5 and 3.6 of the methodology):
 - The ramp-up is excluded: the steady-state window starts rampup_s after the first
@@ -36,6 +38,7 @@ SETUP_LABELS = {"SETUP_login"}
 H1_LIMIT_PCT = 15.0
 H1_ERROR_LIMIT_PCT = 1.0
 H2_SATURATION_PCT = 5.0
+H2_SLOPE_MIN_VU = 200
 
 UNITS = {
     "B": 1 / 1024**2, "KiB": 1 / 1024, "MiB": 1, "GiB": 1024,
@@ -223,9 +226,12 @@ def saturation_vu(by_vu):
 def h2_table(summary):
     index = {(r["mode"], r["endpoint"], int(r["users"]), r["framework"]): r for r in summary}
     groups = sorted({(mode, endpoint) for mode, endpoint, _, _ in index})
-    print(f"\nH2: NestJS slope below saturation < Laravel; NestJS error rate lower at VU >= 500; "
-          f"saturation (error > {H2_SATURATION_PCT:g}%) at a higher VU")
-    header = f"{'mode':9} {'endpoint':8} {'VU':>5} {'p95 L':>8} {'p95 N':>8} {'err L%':>7} {'err N%':>7}"
+    print(f"\nH2: p95 slope on VU >= {H2_SLOPE_MIN_VU} still below saturation "
+          f"(error <= {H2_SATURATION_PCT:g}%) is lower for NestJS; "
+          f"error rate lower at VU >= 500; saturation (error > {H2_SATURATION_PCT:g}%) at a higher VU")
+    print("p99 is listed per VU and is not an input to the slope")
+    header = (f"{'mode':9} {'endpoint':8} {'VU':>5} {'p95 L':>8} {'p95 N':>8} "
+              f"{'p99 L':>8} {'p99 N':>8} {'err L%':>7} {'err N%':>7}")
     print(header)
     print("-" * len(header))
     for mode, endpoint in groups:
@@ -241,17 +247,18 @@ def h2_table(summary):
         nest = {vu: index[(mode, endpoint, vu, "nestjs")] for vu in vus}
         for vu in vus:
             print(f"{mode:9} {endpoint:8} {vu:>5} {lar[vu]['p95_ms_median']:>8.1f} "
-                  f"{nest[vu]['p95_ms_median']:>8.1f} {lar[vu]['error_rate_pct_median']:>7.2f} "
+                  f"{nest[vu]['p95_ms_median']:>8.1f} {lar[vu]['p99_ms_median']:>8.1f} "
+                  f"{nest[vu]['p99_ms_median']:>8.1f} {lar[vu]['error_rate_pct_median']:>7.2f} "
                   f"{nest[vu]['error_rate_pct_median']:>7.2f}")
 
         full = [(vu, lar[vu]["p95_ms_median"], nest[vu]["p95_ms_median"]) for vu in vus]
         sat_l, sat_n = saturation_vu(lar), saturation_vu(nest)
-        # Same VU set for both frameworks: strictly below whichever saturates first.
-        # No saturation on either side leaves the linear region equal to the full range.
+        # Verdict fit: drop VU < 200, then drop every level at or above the earlier
+        # saturation point, so both frameworks are fitted on the same levels.
         cut = min((s for s in (sat_l, sat_n) if s is not None), default=None)
-        linear = [p for p in full if cut is None or p[0] < cut]
-        slope_l = slope([(vu, p95) for vu, p95, _ in linear])
-        slope_n = slope([(vu, p95) for vu, _, p95 in linear])
+        verdict_pts = [p for p in full if p[0] >= H2_SLOPE_MIN_VU and (cut is None or p[0] < cut)]
+        slope_l = slope([(vu, p95) for vu, p95, _ in verdict_pts])
+        slope_n = slope([(vu, p95) for vu, _, p95 in verdict_pts])
         full_l = slope([(vu, p95) for vu, p95, _ in full])
         full_n = slope([(vu, p95) for vu, _, p95 in full])
 
@@ -270,8 +277,8 @@ def h2_table(summary):
         def fmt_sat(value):
             return "brak" if value is None else str(value)
 
-        print(f"         slope full {fmt_slope(full_l)} / {fmt_slope(full_n)} ms/VU (L/N), "
-              f"linear {fmt_slope(slope_l)} / {fmt_slope(slope_n)}, "
+        print(f"         slope full {fmt_slope(full_l)} / {fmt_slope(full_n)} ms/VU (L/N, not in the verdict), "
+              f"VU>={H2_SLOPE_MIN_VU} below saturation {fmt_slope(slope_l)} / {fmt_slope(slope_n)}, "
               f"saturation {fmt_sat(sat_l)} / {fmt_sat(sat_n)}  "
               f"{'holds' if holds else 'rejected'}")
 
@@ -290,13 +297,17 @@ def ep1_baseline():
     return baseline
 
 
+H3_CRITERION_VU = 50
+
+
 def h3_table(summary):
     baseline = ep1_baseline()
     index = {(r["mode"], r["endpoint"], int(r["users"]), r["framework"]): r for r in summary}
-    print("\nH3: |dp95(EP4)| / |dp95(EP1)| > 2 at the same mode and VU "
+    print(f"\nH3 at {H3_CRITERION_VU} VU: |dp95(EP4)| / |dp95(EP1)| > 2 "
           "(EP1 median from results/s1/summary.csv)")
+    print("Other VU: observation of EP4-EP6 (p95, rps, error rate), no ratio against EP1")
     header = (f"{'mode':9} {'endpoint':8} {'VU':>5} {'p95 L':>8} {'p95 N':>8} {'dp95%':>7} "
-              f"{'err L%':>7} {'err N%':>7}  H3")
+              f"{'rps L':>9} {'rps N':>9} {'err L%':>7} {'err N%':>7}  H3")
     print(header)
     print("-" * len(header))
     for (mode, endpoint, users, framework), lar in sorted(index.items()):
@@ -308,8 +319,8 @@ def h3_table(summary):
             continue
         dp95 = rel_delta_pct(lar["p95_ms_median"], nest["p95_ms_median"])
         err_l, err_n = lar["error_rate_pct_median"], nest["error_rate_pct_median"]
-        verdict = ""
-        if endpoint == "EP4":
+        verdict = "observation" if users != H3_CRITERION_VU else ""
+        if endpoint == "EP4" and users == H3_CRITERION_VU:
             ep1_l = baseline.get((mode, "laravel", users))
             ep1_n = baseline.get((mode, "nestjs", users))
             if ep1_l is None or ep1_n is None:
@@ -320,7 +331,20 @@ def h3_table(summary):
                 shown = "inf" if ratio == math.inf else f"{ratio:.2f}"
                 verdict = f"{shown} {'holds' if ratio > 2 else 'rejected'}"
         print(f"{mode:9} {endpoint:8} {users:>5} {lar['p95_ms_median']:>8.1f} {nest['p95_ms_median']:>8.1f} "
-              f"{dp95:>7.1f} {err_l:>7.2f} {err_n:>7.2f}  {verdict}")
+              f"{dp95:>7.1f} {lar['throughput_rps_median']:>9.1f} {nest['throughput_rps_median']:>9.1f} "
+              f"{err_l:>7.2f} {err_n:>7.2f}  {verdict}")
+
+
+def print_query_counts(scenario_dir):
+    files = sorted(scenario_dir.glob("query-count-*.txt"))
+    print("\nSQL query count (out of band, same figure at 50 and 200 VU, not part of the ratio):")
+    if not files:
+        print("  no query-count-*.txt; run scripts/query-count.sh <laravel|nestjs>")
+        return
+    for path in files:
+        print(f"  {path.name}")
+        for line in path.read_text().splitlines():
+            print(f"    {line}")
 
 
 def main():
@@ -347,6 +371,7 @@ def main():
         h2_table(summary)
     elif name == "s3":
         h3_table(summary)
+        print_query_counts(scenario_dir)
 
 
 if __name__ == "__main__":
