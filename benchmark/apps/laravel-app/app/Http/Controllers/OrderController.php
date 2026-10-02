@@ -57,7 +57,7 @@ class OrderController extends Controller
             auth()->user(),
         );
 
-        return response()->json($order->load('orderItems'), 201);
+        return response()->json($order, 201);
     }
 
     /**
@@ -70,6 +70,6 @@ class OrderController extends Controller
 
         $this->orderService->updateStatus($order, $request->validated()['status']);
 
-        return response()->json($order->fresh());
+        return response()->json($order);
     }
 }
