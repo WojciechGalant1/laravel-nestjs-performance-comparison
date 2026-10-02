@@ -1,20 +1,30 @@
 #!/usr/bin/env bash
-# Run one measurement scenario against one framework, as described in metodyka.md
-# (Sections 3.3 and 3.6). For every endpoint x concurrency level x repetition:
+# Run one measurement scenario as described in metodyka.md (Sections 3.3 and 3.6).
+# For every endpoint x concurrency level x repetition:
 #   1. scripts/db-reset.sh: restore the database from its template, restart the app
 #   2. warm-up run (results discarded)
 #   3. docker stats streamed to stats.csv for the duration of the measurement
 #   4. measurement run, written to results.jtl
 #   5. meta.json with the parameters and the effective container limits
 #
-# Usage: scripts/run-scenario.sh <laravel|nestjs> <scenario>      e.g. ... nestjs s1
+# Usage:
+#   scripts/run-scenario.sh <laravel|nestjs> <scenario>   one stack (control / resume)
+#   scripts/run-scenario.sh both <scenario>               both stacks, interleaved
+#
+# Interleaved mode puts the repetition in the outer loop and the framework in the
+# inner loop. The order of the two frameworks within each repetition is shuffled
+# from INTERLEAVE_SEED (default 20261002) so the comparison is not confounded with
+# thermal or host drift. Only one application stack runs at a time.
 #
 # Environment (defaults follow the methodology):
-#   MODE=isolated|mixed   isolated: one run per endpoint; mixed: all endpoints in one run
-#   ENDPOINTS="EP1 EP2 EP8" USERS="10 50" REPS=10 WARMUP=120 DURATION=180 RAMPUP=10
+#   MODE=isolated|mixed
+#   ENDPOINTS / USERS override the scenario defaults
+#   REPS=10 WARMUP=120 DURATION=180 RAMPUP=10
+#   S1 defaults: ENDPOINTS="EP1 EP2 EP8" USERS="1 2 4 10"
 #   S2 defaults: ENDPOINTS="EP3 EP7 EP9" USERS="10 50 100 200 500 1000"
-#   S3 defaults: ENDPOINTS="EP4 EP5 EP6" USERS="50 200"
-#   DB_POOL_SIZE=1   NestJS control run; results go to results/s2-pool1/ instead of results/s2/
+#   S3 defaults: ENDPOINTS="EP1 EP4 EP5 EP6" USERS="1 2 4 10"
+#   DB_POOL_SIZE=1   NestJS control run; results go to results/s2-pool1/
+#   INTERLEAVE_SEED  integer used only in `both` mode
 #
 # Output: results/<scenario>/<framework>/<endpoint>/vu<N>/rep<NN>/
 #   results.jtl, jmeter.log, warmup.log, stats.csv, meta.json
@@ -25,20 +35,20 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-usage() { echo "Usage: $0 <laravel|nestjs> <scenario>" >&2; exit 1; }
+usage() { echo "Usage: $0 <laravel|nestjs|both> <scenario>" >&2; exit 1; }
 [ $# -eq 2 ] || usage
-framework="$1" scenario="$2"
+target="$1" scenario="$2"
 
-case "$framework" in
-    laravel) app=laravel-app nginx=laravel-nginx other=nestjs-app ;;
-    nestjs) app=nestjs-app nginx=nestjs-nginx other=laravel-app ;;
+case "$target" in
+    laravel|nestjs) frameworks=("$target") ;;
+    both) frameworks=(laravel nestjs) ;;
     *) usage ;;
 esac
 
 case "$scenario" in
-    s1) default_endpoints="EP1 EP2 EP8"; default_users="10 50" ;;
-    s2) default_endpoints="EP3 EP7 EP9"; default_users="10 50 100 200 500 1000" ;;
-    s3) default_endpoints="EP4 EP5 EP6"; default_users="50 200" ;;
+    s1) default_endpoints="EP1 EP2 EP8"; extra_endpoints="PING"; default_users="1 2 4 10" ;;
+    s2) default_endpoints="EP3 EP7 EP9"; extra_endpoints=""; default_users="10 50 100 200 500 1000" ;;
+    s3) default_endpoints="EP1 EP4 EP5 EP6"; extra_endpoints=""; default_users="1 2 4 10" ;;
     *) echo "Unknown scenario: ${scenario} (no jmeter/${scenario}.jmx defaults)" >&2; exit 1 ;;
 esac
 
@@ -49,16 +59,15 @@ REPS="${REPS:-10}"
 WARMUP="${WARMUP:-120}"
 DURATION="${DURATION:-180}"
 RAMPUP="${RAMPUP:-10}"
+INTERLEAVE_SEED="${INTERLEAVE_SEED:-20261002}"
 
 case "$MODE" in
     isolated)
         for ep in $ENDPOINTS; do
-            [[ " $default_endpoints " == *" $ep "* ]] || { echo "Endpoint ${ep} is not part of ${scenario}" >&2; exit 1; }
+            [[ " $default_endpoints $extra_endpoints " == *" $ep "* ]] || { echo "Endpoint ${ep} is not part of ${scenario}" >&2; exit 1; }
         done
         read -r -a endpoints <<<"$ENDPOINTS"
         ;;
-    # The plan's Switch Controller falls back to its first child for unknown names,
-    # so the selector is validated here rather than in JMeter.
     mixed) endpoints=(MIXED) ;;
     *) echo "MODE must be isolated or mixed" >&2; exit 1 ;;
 esac
@@ -69,23 +78,30 @@ read -r -a users <<<"$USERS"
 
 running() { [ -n "$(docker compose ps -q --status running "$1")" ]; }
 
-for svc in "$app" "$nginx" postgres; do
-    running "$svc" || { echo "${svc} is not running: docker compose --profile ${framework} up -d --wait" >&2; exit 1; }
-done
-if running "$other"; then
-    echo "${other} is running as well; both stacks would share the same CPUs." >&2
-    echo "Stop it first: docker compose stop ${other} ${other%-app}-nginx" >&2
-    exit 1
-fi
+stack_for() {
+    case "$1" in
+        laravel) echo laravel-app laravel-nginx nestjs-app nestjs-nginx ;;
+        nestjs) echo nestjs-app nestjs-nginx laravel-app laravel-nginx ;;
+    esac
+}
 
-docker compose --profile loadtest build -q jmeter
+ensure_stack() {
+    local fw="$1"
+    read -r app nginx other other_nginx <<<"$(stack_for "$fw")"
+    if running "$other" || running "$other_nginx"; then
+        echo "Stopping ${other} ${other_nginx} so only ${fw} uses the CPUs"
+        docker compose stop "$other" "$other_nginx" >/dev/null
+    fi
+    running postgres || { echo "postgres is not running: docker compose up -d --wait postgres" >&2; exit 1; }
+    if ! running "$app" || ! running "$nginx"; then
+        docker compose --profile "$fw" up -d --wait "$app" "$nginx" >/dev/null
+    fi
+}
 
-# NestJS reads DB_POOL_SIZE at process start. Align the running container with the
-# requested value (default 10) so a control run cannot leak into the next series.
-# A non-default pool is written to its own directory: results/s2-pool<N>/.
-desired_pool="${DB_POOL_SIZE:-10}"
-out_name="$scenario"
-if [ "$framework" = nestjs ]; then
+align_nestjs_pool() {
+    local desired_pool="${DB_POOL_SIZE:-10}"
+    running nestjs-app || return 0
+    local actual_pool
     actual_pool=$(docker compose exec -T nestjs-app printenv DB_POOL_SIZE)
     if [ "$actual_pool" != "$desired_pool" ]; then
         echo "Recreating nestjs-app with DB_POOL_SIZE=${desired_pool} (container has ${actual_pool})"
@@ -96,16 +112,21 @@ if [ "$framework" = nestjs ]; then
             exit 1
         fi
     fi
-    if [ "$scenario" = s2 ] && [ "$desired_pool" != 10 ]; then
-        out_name="s2-pool${desired_pool}"
-    fi
+}
+
+docker compose --profile loadtest build -q jmeter
+
+desired_pool="${DB_POOL_SIZE:-10}"
+out_name="$scenario"
+if [ "$scenario" = s2 ] && [ "$desired_pool" != 10 ]; then
+    out_name="s2-pool${desired_pool}"
 fi
 
 # Same rule as scripts/jmeter-data.sh: the day after the last seeded reservation,
 # or today (UTC, postgres container) when that day is already in the past.
-# Passed with -J so a ranges.properties generated earlier cannot go stale.
 ep9_start=""
 if [ "$scenario" = s2 ]; then
+    running postgres || { echo "postgres is not running" >&2; exit 1; }
     max_reservation=$(docker compose exec -T postgres sh -c \
         'psql -U "$POSTGRES_USER" -d laravel_app_template -v ON_ERROR_STOP=1 -X -q -A -t -c "SELECT MAX(reservation_date) FROM reservations"')
     max_reservation="${max_reservation//[[:space:]]/}"
@@ -118,7 +139,12 @@ if [ "$scenario" = s2 ]; then
 fi
 
 jmeter() {
-    docker compose --profile loadtest run --rm -T --no-deps jmeter \
+    local name=()
+    if [ "${1:-}" = "--name" ]; then
+        name=(--name "$2")
+        shift 2
+    fi
+    docker compose --profile loadtest run --rm -T --no-deps "${name[@]}" jmeter \
         -n -t "/tests/${scenario}.jmx" \
         -q /tests/run.properties -q /tests/data/ranges.properties \
         -Jhost="$nginx" -Jport=80 -Jrampup="$RAMPUP" "$@"
@@ -130,8 +156,12 @@ jmeter() {
 # the same clock as the measurement window in meta.json.
 start_stats() {
     local out="$1"
+    local jmeter_id="${2:-}"
     local ids
     ids=$(docker compose ps -q "$app" "$nginx" postgres | tr '\n' ' ')
+    if [ -n "$jmeter_id" ]; then
+        ids="$ids $jmeter_id"
+    fi
     echo "epoch,name,cpu_perc,mem_usage,mem_limit,mem_perc" >"$out"
     # shellcheck disable=SC2086
     docker stats --format '{{json .}}' $ids > >(
@@ -157,9 +187,6 @@ stop_stats() {
 
 inspect() { docker inspect -f "$1" "$(docker compose ps -q "$app")"; }
 
-# JMeter timestamps come from the Docker Desktop VM clock, stats.csv from this
-# shell's clock (WSL), and the two drift apart. The offset (VM minus WSL, seconds)
-# lets summarize.py cut stats.csv to the exact load window seen in results.jtl.
 clock_offset() {
     local t0 vm t1
     t0="$EPOCHREALTIME"
@@ -168,20 +195,30 @@ clock_offset() {
     awk -v a="$t0" -v b="$t1" -v v="$vm" 'BEGIN { printf "%.3f", v - (a + b) / 2 }'
 }
 
-pool_size="n/a"
-[ "$framework" = nestjs ] && pool_size=$(docker compose exec -T nestjs-app printenv DB_POOL_SIZE)
-app_cpus=$(awk -v n="$(inspect '{{.HostConfig.NanoCpus}}')" 'BEGIN { print n / 1e9 }')
-app_mem_mib=$(( $(inspect '{{.HostConfig.Memory}}') / 1024 / 1024 ))
-image=$(inspect '{{.Image}}')
+row_counts() {
+    local db="$1"
+    docker compose exec -T postgres sh -c \
+        'psql -U "$POSTGRES_USER" -d '"$db"' -v ON_ERROR_STOP=1 -X -q -A -t' <<'SQL'
+SELECT json_build_object(
+  'orders', (SELECT count(*)::bigint FROM orders),
+  'order_items', (SELECT count(*)::bigint FROM order_items),
+  'reservations', (SELECT count(*)::bigint FROM reservations)
+);
+SQL
+}
 
-total=$(( ${#endpoints[@]} * ${#users[@]} * REPS ))
-per_run=$(( WARMUP + DURATION + 30 ))
-done_runs=0
+framework_order() {
+    local rep="$1"
+    python3 -c '
+import random, sys
+seed, rep = int(sys.argv[1]), int(sys.argv[2])
+rng = random.Random((seed, rep))
+xs = ["laravel", "nestjs"]
+rng.shuffle(xs)
+print(" ".join(xs))
+' "$INTERLEAVE_SEED" "$rep"
+}
 
-# Warm-up and measurement are separate JMeter processes on the same database, so
-# EP9's slot counter would otherwise start at zero twice and the measurement would
-# collide with reservations created during warm-up. 100000000 slots is about 28
-# years further along the 200 x 48 grid.
 warmup_ep9=()
 measure_ep9=()
 if [ "$scenario" = s2 ]; then
@@ -189,52 +226,81 @@ if [ "$scenario" = s2 ]; then
     measure_ep9=(-Jep9.start="$ep9_start" -Jep9.offset=100000000)
 fi
 
-for ep in "${endpoints[@]}"; do
-    for vu in "${users[@]}"; do
-        for rep in $(seq 1 "$REPS"); do
-            rel="${out_name}/${framework}/${ep}/vu${vu}/rep$(printf '%02d' "$rep")"
-            dir="results/${rel}"
-            container_dir="/results/${rel}"
-            done_runs=$((done_runs + 1))
-            if grep -qs '"status": "complete"' "${dir}/meta.json"; then
-                # Resume only a series with the same parameters; e.g. a smoke test must
-                # not be counted as the first repetition of a real series.
-                if ! grep -q "\"warmup_s\": ${WARMUP}," "${dir}/meta.json" \
-                    || ! grep -q "\"duration_s\": ${DURATION}," "${dir}/meta.json" \
-                    || ! grep -q "\"rampup_s\": ${RAMPUP}," "${dir}/meta.json" \
-                    || ! grep -q "\"db_pool_size\": \"${pool_size}\"," "${dir}/meta.json"; then
-                    echo "${dir} holds a run with different WARMUP/DURATION/RAMPUP or DB_POOL_SIZE; move it away first." >&2
-                    exit 1
-                fi
-                echo "[${done_runs}/${total}] ${dir}: already complete, skipped"
-                continue
-            fi
-            rm -rf "$dir" && mkdir -p "$dir"
+total=$(( ${#endpoints[@]} * ${#users[@]} * REPS * ${#frameworks[@]} ))
+per_run=$(( WARMUP + DURATION + 30 ))
+done_runs=0
 
-            eta=$(( (total - done_runs + 1) * per_run / 60 ))
-            echo "[${done_runs}/${total}] ${framework} ${out_name} ${ep} vu=${vu} rep=${rep} (about ${eta} min left)"
+run_one() {
+    local framework="$1" ep="$2" vu="$3" rep="$4" order="$5"
+    read -r app nginx other other_nginx <<<"$(stack_for "$framework")"
+    ensure_stack "$framework"
+    [ "$framework" = nestjs ] && align_nestjs_pool
 
-            scripts/db-reset.sh "$framework" >/dev/null
+    local pool_size="n/a"
+    [ "$framework" = nestjs ] && pool_size=$(docker compose exec -T nestjs-app printenv DB_POOL_SIZE)
+    local app_cpus app_mem_mib image
+    app_cpus=$(awk -v n="$(inspect '{{.HostConfig.NanoCpus}}')" 'BEGIN { print n / 1e9 }')
+    app_mem_mib=$(( $(inspect '{{.HostConfig.Memory}}') / 1024 / 1024 ))
+    image=$(inspect '{{.Image}}')
 
-            jmeter -Jendpoint="$ep" -Jusers="$vu" -Jduration="$WARMUP" \
-                "${warmup_ep9[@]}" \
-                -j "${container_dir}/warmup.log" >/dev/null
+    local rel dir container_dir
+    rel="${out_name}/${framework}/${ep}/vu${vu}/rep$(printf '%02d' "$rep")"
+    dir="results/${rel}"
+    container_dir="/results/${rel}"
+    done_runs=$((done_runs + 1))
 
-            offset=$(clock_offset)
-            start_stats "${dir}/stats.csv"
-            started="$EPOCHREALTIME"
-            status=complete
-            jmeter -Jendpoint="$ep" -Jusers="$vu" -Jduration="$DURATION" \
-                "${measure_ep9[@]}" \
-                -l "${container_dir}/results.jtl" -j "${container_dir}/jmeter.log" >/dev/null || status=failed
-            finished="$EPOCHREALTIME"
-            stop_stats
+    if grep -qs '"status": "complete"' "${dir}/meta.json"; then
+        if ! grep -q "\"warmup_s\": ${WARMUP}," "${dir}/meta.json" \
+            || ! grep -q "\"duration_s\": ${DURATION}," "${dir}/meta.json" \
+            || ! grep -q "\"rampup_s\": ${RAMPUP}," "${dir}/meta.json" \
+            || ! grep -q "\"db_pool_size\": \"${pool_size}\"," "${dir}/meta.json"; then
+            echo "${dir} holds a run with different WARMUP/DURATION/RAMPUP or DB_POOL_SIZE; move it away first." >&2
+            exit 1
+        fi
+        echo "[${done_runs}/${total}] ${dir}: already complete, skipped"
+        return 0
+    fi
+    rm -rf "$dir" && mkdir -p "$dir"
 
-            if ! grep -q ',SETUP_login,200,' "${dir}/results.jtl" 2>/dev/null; then
-                status=failed
-            fi
+    local eta=$(( (total - done_runs + 1) * per_run / 60 ))
+    echo "[${done_runs}/${total}] ${framework} ${out_name} ${ep} vu=${vu} rep=${rep} (about ${eta} min left)"
 
-            cat >"${dir}/meta.json" <<EOF
+    scripts/db-reset.sh "$framework" >/dev/null
+
+    jmeter -Jendpoint="$ep" -Jusers="$vu" -Jduration="$WARMUP" \
+        "${warmup_ep9[@]}" \
+        -j "${container_dir}/warmup.log" >/dev/null
+
+    local offset started finished status measure_name mpid jid db counts
+    offset=$(clock_offset)
+    started="$EPOCHREALTIME"
+    status=complete
+    measure_name="benchmark-jmeter-measure"
+    docker rm -f "$measure_name" >/dev/null 2>&1 || true
+    jmeter --name "$measure_name" -Jendpoint="$ep" -Jusers="$vu" -Jduration="$DURATION" \
+        "${measure_ep9[@]}" \
+        -l "${container_dir}/results.jtl" -j "${container_dir}/jmeter.log" >/dev/null &
+    mpid=$!
+    jid=""
+    for _ in $(seq 1 100); do
+        jid=$(docker ps -q -f "name=^/${measure_name}$")
+        [ -n "$jid" ] && break
+        kill -0 "$mpid" 2>/dev/null || break
+        sleep 0.1
+    done
+    start_stats "${dir}/stats.csv" "$jid"
+    wait "$mpid" || status=failed
+    finished="$EPOCHREALTIME"
+    stop_stats
+
+    if ! grep -q ',SETUP_login,200,' "${dir}/results.jtl" 2>/dev/null; then
+        status=failed
+    fi
+
+    db="${framework}_app"
+    counts=$(row_counts "$db" | tr -d '\r\n ')
+
+    cat >"${dir}/meta.json" <<EOF
 {
   "status": "${status}",
   "framework": "${framework}",
@@ -252,15 +318,51 @@ for ep in "${endpoints[@]}"; do
   "app_cpus": ${app_cpus},
   "app_memory_mib": ${app_mem_mib},
   "db_pool_size": "${pool_size}",
-  "app_image": "${image}"
+  "app_image": "${image}",
+  "interleave_seed": ${INTERLEAVE_SEED},
+  "framework_order": "${order}",
+  "row_counts": ${counts:-null}
 }
 EOF
-            if [ "$status" != complete ]; then
-                echo "Run failed, see ${dir}/jmeter.log and ${dir}/results.jtl" >&2
-                exit 1
-            fi
+    if [ "$status" != complete ]; then
+        echo "Run failed, see ${dir}/jmeter.log and ${dir}/results.jtl" >&2
+        exit 1
+    fi
+}
+
+# Single-stack mode still requires the stack to be up before the first run.
+if [ "$target" != both ]; then
+    read -r app nginx other other_nginx <<<"$(stack_for "$target")"
+    for svc in "$app" "$nginx" postgres; do
+        running "$svc" || { echo "${svc} is not running: docker compose --profile ${target} up -d --wait" >&2; exit 1; }
+    done
+    if running "$other"; then
+        echo "${other} is running as well; both stacks would share the same CPUs." >&2
+        echo "Stop it first: docker compose stop ${other} ${other_nginx}" >&2
+        exit 1
+    fi
+    [ "$target" = nestjs ] && align_nestjs_pool
+else
+    running postgres || { echo "postgres is not running: docker compose up -d --wait postgres" >&2; exit 1; }
+fi
+
+for rep in $(seq 1 "$REPS"); do
+    if [ "$target" = both ]; then
+        order=$(framework_order "$rep")
+    else
+        order="$target"
+    fi
+    for ep in "${endpoints[@]}"; do
+        for vu in "${users[@]}"; do
+            for framework in $order; do
+                case " ${frameworks[*]} " in
+                    *" $framework "*) ;;
+                    *) continue ;;
+                esac
+                run_one "$framework" "$ep" "$vu" "$rep" "$order"
+            done
         done
     done
 done
 
-echo "Done: results/${out_name}/${framework}"
+echo "Done: results/${out_name}/"

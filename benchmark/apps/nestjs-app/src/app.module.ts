@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BaseEntity, DataSource } from 'typeorm';
 import { AppController } from './app.controller';
+import { PingController } from './ping.controller';
 import { AuthModule } from './auth/auth.module';
 import { QueryCountLogger } from './common/query-count.logger';
 import { DashboardModule } from './dashboard/dashboard.module';
@@ -61,7 +62,7 @@ import { TablesModule } from './tables/tables.module';
     DashboardModule,
     ReservationsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, PingController],
 })
 export class AppModule {
   // Enable TypeORM's Active Record pattern: bind the initialized DataSource to

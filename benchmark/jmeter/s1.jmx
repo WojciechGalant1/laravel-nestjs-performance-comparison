@@ -6,6 +6,7 @@
   run unchanged in the JMeter GUI against the Laravel stack on localhost:8080):
     host, port        target nginx (in the runner: laravel-nginx / nestjs-nginx, port 80)
     endpoint          EP1 | EP2 | EP8 run one endpoint in isolation, MIXED picks one at random per iteration
+                      PING is a diagnostic (GET /api/ping, no database) and is not part of MIXED or of H1
     users, rampup, duration   closed workload: users threads, no think time, duration in seconds
     ep1.pages, ep2.pages, orders.max   ranges from jmeter/data/ranges.properties (-q)
 -->
@@ -215,6 +216,17 @@
                   <stringProp name="Argument.metadata">=</stringProp>
                 </elementProp>
               </collectionProp>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="PING">
+            <stringProp name="HTTPSampler.path">/api/ping</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>

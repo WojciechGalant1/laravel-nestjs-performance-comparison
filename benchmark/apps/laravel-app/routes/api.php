@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DishController;
 use App\Http\Controllers\MenuItemController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PingController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\TableController;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +14,9 @@ use Illuminate\Support\Facades\Route;
 Route::post('auth/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:api', 'count.queries'])->group(function () {
+    // Diagnostic: routing and framework bootstrap, no database access.
+    Route::get('ping', PingController::class);
+
     // EP1: baseline (0 relations)
     Route::get('tables', [TableController::class, 'index']);
 
