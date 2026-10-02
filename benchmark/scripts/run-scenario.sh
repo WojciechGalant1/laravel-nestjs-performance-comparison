@@ -238,10 +238,12 @@ run_one() {
 
     local pool_size="n/a"
     [ "$framework" = nestjs ] && pool_size=$(docker compose exec -T nestjs-app printenv DB_POOL_SIZE)
-    local app_cpus app_mem_mib image
+    local app_cpus app_mem_mib image postgres_cpus
     app_cpus=$(awk -v n="$(inspect '{{.HostConfig.NanoCpus}}')" 'BEGIN { print n / 1e9 }')
     app_mem_mib=$(( $(inspect '{{.HostConfig.Memory}}') / 1024 / 1024 ))
     image=$(inspect '{{.Image}}')
+    postgres_cpus=$(awk -v n="$(docker inspect -f '{{.HostConfig.NanoCpus}}' "$(docker compose ps -q postgres)")" \
+        'BEGIN { c = n / 1e9; print (c > 0 ? c : 4) }')
 
     local rel dir container_dir
     rel="${out_name}/${framework}/${ep}/vu${vu}/rep$(printf '%02d' "$rep")"
@@ -316,6 +318,7 @@ run_one() {
   "measurement_finished": ${finished},
   "clock_offset_s": ${offset},
   "app_cpus": ${app_cpus},
+  "postgres_cpus": ${postgres_cpus},
   "app_memory_mib": ${app_mem_mib},
   "db_pool_size": "${pool_size}",
   "app_image": "${image}",

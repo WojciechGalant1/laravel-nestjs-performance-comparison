@@ -59,7 +59,7 @@ Parametry podaje się zmiennymi środowiskowymi. Wartości domyślne odpowiadaj�
 | `RAMPUP` | `10` | narastanie liczby wątków (wycinane z wyników) |
 | `INTERLEAVE_SEED` | `20261002` | ziarno kolejności Laravel/NestJS w trybie `both` |
 
-Każde powtórzenie: `scripts/db-reset.sh` (baza z szablonu i restart aplikacji), rozgrzewka, pomiar ze zbieraniem `docker stats` (aplikacja, nginx, postgres, JMeter), zapis `meta.json`. Pełny S1 `isolated` to 3 endpointy × 4 poziomy VU × 10 powtórzeń × 2 frameworki, przy około 5,5 minuty na przebieg. Werdykt H1 liczy się tylko na poziomach, które przejdą regułę niskiego obciążenia (skalowanie ≥ 0,80 i CPU aplikacji < 80% limitu).
+Każde powtórzenie: `scripts/db-reset.sh` (baza z szablonu i restart aplikacji), rozgrzewka, pomiar ze zbieraniem `docker stats` (aplikacja, nginx, postgres, JMeter), zapis `meta.json`. Pełny S1 `isolated` to 3 endpointy × 4 poziomy VU × 10 powtórzeń × 2 frameworki, przy około 5,5 minuty na przebieg. Werdykt H1 liczy się tylko na prefixie {1, 2, 4, 10}, na którym oba stosy i EP1, EP2 oraz EP8 przechodzą skalowanie ≥ 0,80 oraz CPU aplikacji i PostgreSQL < 80% limitu. Zbiór {1} nadal ocenia H1, tylko przy 1 VU.
 
 Przerwaną serię wznawia się tym samym poleceniem: powtórzenia z `"status": "complete"` w `meta.json` są pomijane. Jeśli taki przebieg ma inne `WARMUP`/`DURATION`/`RAMPUP` albo inną pulę połączeń NestJS (np. pozostał po teście dymnym), runner przerywa pracę – katalog trzeba przenieść (wyniki testu dymnego są w `results/smoke/`). Nieudany przebieg (np. odrzucone logowanie) zatrzymuje runner i zostaje oznaczony jako `failed`.
 
@@ -93,7 +93,7 @@ Wyniki trafiają do `results/s2-pool1/`, a nie do `results/s2/`. Kolejny start b
 ./scripts/run-scenario.sh both s3
 ```
 
-Domyślnie `ENDPOINTS="EP1 EP4 EP5 EP6"` i `USERS="1 2 4 10"`. EP1 jest bazą H3 w tym samym scenariuszu. Po S1, zanim ruszy S3: `python3 scripts/summarize.py --freeze-h3-threshold` zapisuje `results/h3_threshold.json`. Podsumowanie S3 bez tego pliku kończy się błędem. EP4 losuje istniejące zamówienie (`1..orders.max`), EP5 losuje danie (`1..dishes.max`), EP6 woła `GET /api/dashboard/summary` bez parametrów. Wszystkie cztery kończą się HTTP 200.
+Domyślnie `ENDPOINTS="EP1 EP4 EP5 EP6"` i `USERS="1 2 4 10"`. EP1 jest bazą H3 w tym samym scenariuszu. Zbiór niskiego obciążenia liczy się osobno dla każdej pary (EP1, EP_k). Po S1, zanim ruszy S3: `python3 scripts/summarize.py --freeze-h3-threshold` zapisuje `results/h3_threshold.json`. Podsumowanie S3 bez tego pliku kończy się błędem. EP4 losuje istniejące zamówienie (`1..orders.max`), EP5 losuje danie (`1..dishes.max`), EP6 woła `GET /api/dashboard/summary` bez parametrów. Wszystkie cztery kończą się HTTP 200.
 
 Licznik zapytań SQL nie wchodzi do planu JMetera. Jedno żądanie na endpoint, ze stosem już uruchomionym:
 
@@ -123,7 +123,7 @@ python3 scripts/summarize.py s2
 python3 scripts/summarize.py s3
 ```
 
-Dla S3 skrypt drukuje tabelę H3: D_k = (p95_L(k) − p95_N(k)) − (p95_L(EP1) − p95_N(EP1)) z bootstrapowym CI, próg Y z `results/h3_threshold.json`, werdykt na najwyższym poziomie niskiego obciążenia S3. Licznik SQL pochodzi z `query-count-*.txt` i nie wchodzi do D_k. Dla S2 skrypt drukuje tabelę H2: p95, p99 i odsetek błędów per endpoint i VU oraz próg nasycenia (pierwszy VU z błędem powyżej 5%, albo „brak”). Werdykt bierze nachylenie p95 tylko z poziomów VU ≥ 200 leżących poniżej wcześniejszego z dwóch progów nasycenia (te same punkty po obu stronach; poniżej dwóch punktów „n/d”), mniejszy błąd NestJS przy VU ≥ 500 i wyższy próg nasycenia NestJS. Nachylenie na pełnym zakresie jest drukowane obok i nie rozstrzyga hipotezy. p99 jest w tabeli i nie wchodzi do nachylenia. Przebieg kontrolny podsumowuje się osobno: `python3 scripts/summarize.py s2-pool1`.
+Dla S3 skrypt drukuje tabelę H3: D_k = (p95_L(k) − p95_N(k)) − (p95_L(EP1) − p95_N(EP1)) z bootstrapowym CI, próg Y z `results/h3_threshold.json`, werdykt i spójność osobno dla każdej pary (EP1, EP_k). H3 overall wymaga ocenialnych EP4 i EP5; nieocenialne k (np. EP6) jest obserwacją. Licznik SQL pochodzi z `query-count-*.txt` i nie wchodzi do D_k. Dla S2 skrypt drukuje tabelę H2: p95, p99 i odsetek błędów per endpoint i VU oraz próg nasycenia (pierwszy VU z błędem powyżej 5%, albo „brak”). Werdykt bierze nachylenie p95 tylko z poziomów VU ≥ 200 leżących poniżej wcześniejszego z dwóch progów nasycenia (te same punkty po obu stronach; poniżej dwóch punktów „n/d”), mniejszy błąd NestJS przy VU ≥ 500 i wyższy próg nasycenia NestJS. Nachylenie na pełnym zakresie jest drukowane obok i nie rozstrzyga hipotezy. p99 jest w tabeli i nie wchodzi do nachylenia. Przebieg kontrolny podsumowuje się osobno: `python3 scripts/summarize.py s2-pool1`.
 
 Skrypt zapisuje `results/<scenariusz>/runs.csv` (wiersz na powtórzenie i endpoint) oraz `results/<scenariusz>/summary.csv` (mediana i odchylenie standardowe z powtórzeń). Dla S1 drukuje zestaw niskiego obciążenia oraz tabelę H1 z bootstrapowym CI |Δp95|.
 

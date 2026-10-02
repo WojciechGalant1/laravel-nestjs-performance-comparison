@@ -23,9 +23,12 @@ Definitions (Sections 3.3, 3.5 and 3.6 of the methodology):
   postgres and the JMeter container.
 - Delta between frameworks is relative to the mean of the two values, so neither
   framework is the reference: |a - b| / ((a + b) / 2).
-- A concurrency level belongs to the low-load set when, for both frameworks and
-  every endpoint of the scenario, X(N)/(N·X(1)) >= 0.80 and application CPU is
-  below 80% of the container limit. The set is computed per scenario.
+- A concurrency level belongs to a low-load set when, for both frameworks and
+  every endpoint that set requires, (a) X(N)/(N·X(1)) >= 0.80, (b) application
+  CPU is below 80% of its container limit, and (c) PostgreSQL CPU is below 80%
+  of its container limit. The set is the longest prefix of {1, 2, 4, 10} that
+  passes. H1 uses one set over EP1, EP2 and EP8. H3 uses one set per pair
+  (EP1, EP_k).
 - Two secondary figures are printed beside the verdict and do not enter it.
   Little's law mean is concurrency divided by throughput (N/RPS). CPU time per
   request is the application container's CPU, as a fraction of one core, divided
@@ -48,9 +51,11 @@ H1_LIMIT_PCT = 15.0
 H1_ERROR_LIMIT_PCT = 1.0
 H1_ENDPOINTS = ("EP1", "EP2", "EP8")
 H3_ENDPOINTS = ("EP4", "EP5", "EP6")
+H3_REQUIRED = ("EP4", "EP5")
 S3_ENDPOINTS = ("EP1", "EP4", "EP5", "EP6")
 H2_SATURATION_PCT = 5.0
 H2_SLOPE_MIN_VU = 200
+PLANNED_VU = (1, 2, 4, 10)
 LOWLOAD_SCALING_MIN = 0.80
 LOWLOAD_CPU_SHARE_MAX = 0.80
 JMETER_CPU_FLAG_PCT = 80.0
@@ -99,7 +104,7 @@ def container_role(name):
     return name
 
 
-def container_stats(stats_csv, window_wsl, cpus):
+def container_stats(stats_csv, window_wsl, cpus, postgres_cpus=None):
     """Mean and peak per container over the load window (WSL clock)."""
     lo, hi = window_wsl
     per = defaultdict(lambda: {"cpu": [], "mem": []})
@@ -120,6 +125,9 @@ def container_stats(stats_csv, window_wsl, cpus):
         out[f"{role}_mem_peak_mib"] = max(values["mem"])
     if "app_cpu_mean" in out:
         out["app_cpu_share_pct"] = out["app_cpu_mean"] / (100.0 * cpus)
+    pg_cpus = postgres_cpus if postgres_cpus else cpus
+    if "postgres_cpu_mean" in out and pg_cpus:
+        out["postgres_cpu_share_pct"] = out["postgres_cpu_mean"] / (100.0 * pg_cpus)
     return out
 
 
@@ -141,6 +149,7 @@ def summarise_run(run_dir):
         run_dir / "stats.csv",
         (window_start / 1000 - offset, window_end / 1000 - offset),
         meta["app_cpus"],
+        meta.get("postgres_cpus") or meta["app_cpus"],
     )
 
     extra = {}
@@ -204,7 +213,8 @@ def aggregate(rows):
     for row in rows:
         groups[tuple(row[k] for k in keys)].append(row)
 
-    skip = set(keys) | {"repetition", "samples", "window_s", "framework_order", "interleave_seed"}
+    skip = set(keys) | {"repetition", "samples", "window_s", "framework_order",
+                       "interleave_seed", "postgres_cpus"}
     summary = []
     for key, group in sorted(groups.items()):
         out = dict(zip(keys, key))
@@ -300,17 +310,24 @@ def bootstrap_d_k(rows, mode, endpoint, users, rng):
     return point, lo, hi
 
 
-def lowload_set(summary, endpoints, mode="isolated"):
-    """Levels that pass scaling and CPU for both frameworks and every endpoint."""
-    index = summary_index(summary)
-    vus = sorted({
-        int(r["users"])
-        for r in summary
-        if r["mode"] == mode and r["endpoint"] in endpoints
-    })
+def prefix_of_planned(passing):
+    """Longest prefix of the planned VU sequence in which every level passes."""
     members = []
+    passing_set = set(passing)
+    for vu in PLANNED_VU:
+        if vu in passing_set:
+            members.append(vu)
+        else:
+            break
+    return members
+
+
+def lowload_set(summary, endpoints, mode="isolated"):
+    """Prefix of planned VU levels that pass scaling, app CPU and Postgres CPU."""
+    index = summary_index(summary)
+    passing = []
     diagnostics = []
-    for vu in vus:
+    for vu in PLANNED_VU:
         ok = True
         for endpoint in endpoints:
             for framework in ("laravel", "nestjs"):
@@ -320,39 +337,63 @@ def lowload_set(summary, endpoints, mode="isolated"):
                     ok = False
                     diagnostics.append({
                         "users": vu, "endpoint": endpoint, "framework": framework,
-                        "scaling": None, "cpu_share": None, "ok": False, "reason": "missing",
+                        "scaling": None, "app_cpu_share": None, "pg_cpu_share": None,
+                        "ok": False, "reason": "missing",
                     })
                     continue
                 x1 = base["throughput_rps_median"]
                 xn = row["throughput_rps_median"]
                 scaling = None if x1 == 0 else xn / (vu * x1)
-                cpu_share = row.get("app_cpu_share_pct_median")
+                app_share = row.get("app_cpu_share_pct_median")
+                pg_share = row.get("postgres_cpu_share_pct_median")
                 pass_scale = scaling is not None and scaling >= LOWLOAD_SCALING_MIN
-                pass_cpu = cpu_share is not None and cpu_share < LOWLOAD_CPU_SHARE_MAX
-                cell_ok = pass_scale and pass_cpu
+                pass_app = app_share is not None and app_share < LOWLOAD_CPU_SHARE_MAX
+                pass_pg = pg_share is not None and pg_share < LOWLOAD_CPU_SHARE_MAX
+                cell_ok = pass_scale and pass_app and pass_pg
                 if not cell_ok:
                     ok = False
                 diagnostics.append({
                     "users": vu, "endpoint": endpoint, "framework": framework,
-                    "scaling": scaling, "cpu_share": cpu_share, "ok": cell_ok,
+                    "scaling": scaling, "app_cpu_share": app_share, "pg_cpu_share": pg_share,
+                    "ok": cell_ok,
                 })
         if ok:
-            members.append(vu)
-    return members, diagnostics
+            passing.append(vu)
+    return prefix_of_planned(passing), diagnostics
 
 
-def print_lowload(members, diagnostics, scenario):
-    print(f"\nLow-load set for {scenario} (scaling >= {LOWLOAD_SCALING_MIN:g}, "
-          f"app CPU share < {LOWLOAD_CPU_SHARE_MAX:g} of the container limit): "
+def print_lowload(members, diagnostics, label):
+    print(f"\nLow-load set for {label} (scaling >= {LOWLOAD_SCALING_MIN:g}, "
+          f"app and PostgreSQL CPU share < {LOWLOAD_CPU_SHARE_MAX:g} of each "
+          f"container limit; prefix of {list(PLANNED_VU)}): "
           f"{members or 'empty'}")
-    header = f"{'endpoint':8} {'VU':>4} {'fw':8} {'X(N)/(N·X(1))':>14} {'CPU share':>10}  pass"
+    header = (f"{'endpoint':8} {'VU':>4} {'fw':8} {'X(N)/(N·X(1))':>14} "
+              f"{'app CPU':>10} {'PG CPU':>10}  pass")
     print(header)
     print("-" * len(header))
     for row in diagnostics:
         scaling = "n/d" if row["scaling"] is None else f"{row['scaling']:.3f}"
-        cpu = "n/d" if row["cpu_share"] is None else f"{100 * row['cpu_share']:.1f}%"
-        print(f"{row['endpoint']:8} {row['users']:>4} {row['framework']:8} {scaling:>14} {cpu:>10}  "
-              f"{'yes' if row['ok'] else 'no'}")
+        app = "n/d" if row["app_cpu_share"] is None else f"{100 * row['app_cpu_share']:.1f}%"
+        pg = "n/d" if row["pg_cpu_share"] is None else f"{100 * row['pg_cpu_share']:.1f}%"
+        print(f"{row['endpoint']:8} {row['users']:>4} {row['framework']:8} {scaling:>14} "
+              f"{app:>10} {pg:>10}  {'yes' if row['ok'] else 'no'}")
+
+
+def pair_levels(members):
+    if len(members) >= 2:
+        return members[-1], members[-2]
+    return None, None
+
+
+def classify_d_k(lo, hi, y, point_v, point_c):
+    if lo is None or hi is None or point_v is None or point_c is None:
+        return "not evaluable"
+    signs_ok = point_v != 0 and point_c != 0 and (point_v > 0) == (point_c > 0)
+    if lo > y and signs_ok:
+        return "supported"
+    if hi < y:
+        return "rejected"
+    return "inconclusive"
 
 
 def flag_jmeter_cpu(summary):
@@ -473,7 +514,10 @@ def h1_table(summary, rows):
         verdict = "supported"
     else:
         verdict = "inconclusive"
-    print(f"H1 verdict: {verdict}")
+    extra = ""
+    if len(members) == 1:
+        extra = f" (low-load set is {{{members[0]}}} VU only)"
+    print(f"H1 verdict: {verdict}{extra}")
 
 
 def slope(points):
@@ -575,7 +619,8 @@ def coerce_run_row(row):
     out = dict(row)
     for key, cast in (("users", int), ("repetition", int), ("p95_ms", float),
                       ("throughput_rps", float), ("error_rate_pct", float),
-                      ("app_cpu_share_pct", float), ("app_cpu_mean", float)):
+                      ("app_cpu_share_pct", float), ("app_cpu_mean", float),
+                      ("postgres_cpu_share_pct", float), ("postgres_cpu_mean", float)):
         if key in out and out[key] not in ("", None):
             out[key] = cast(out[key])
     return out
@@ -647,19 +692,20 @@ def load_h3_threshold():
 def h3_table(summary, rows):
     threshold = load_h3_threshold()
     y = float(threshold["y_ms"])
-    members, diagnostics = lowload_set(summary, S3_ENDPOINTS)
-    print_lowload(members, diagnostics, "S3")
-    print(f"Y = {y:.3f} ms from {H3_THRESHOLD_PATH} (levels {threshold.get('levels_used')})")
+    print(f"Y = {y:.3f} ms from {H3_THRESHOLD_PATH} (S1 levels {threshold.get('levels_used')})")
 
-    verdict_vu = consistency_vu = None
-    if len(members) >= 2:
-        verdict_vu = members[-1]
-        consistency_vu = members[-2]
-        print(f"H3 verdict level: {verdict_vu} VU; consistency level: {consistency_vu} VU")
-    elif members:
-        print("H3 not evaluable: low-load set has fewer than two levels")
-    else:
-        print("H3 not evaluable: empty low-load set")
+    pair_sets = {}
+    for endpoint in H3_ENDPOINTS:
+        members, diagnostics = lowload_set(summary, ("EP1", endpoint))
+        pair_sets[endpoint] = members
+        print_lowload(members, diagnostics, f"S3 pair (EP1, {endpoint})")
+        verdict_vu, consistency_vu = pair_levels(members)
+        if verdict_vu is not None:
+            print(f"  {endpoint}: verdict {verdict_vu} VU, consistency {consistency_vu} VU")
+        elif members:
+            print(f"  {endpoint}: not evaluable (single level {members[0]} VU)")
+        else:
+            print(f"  {endpoint}: not evaluable (empty low-load set)")
 
     index = summary_index(summary)
     rng = random.Random(BOOTSTRAP_SEED)
@@ -685,6 +731,8 @@ def h3_table(summary, rows):
             ep1_l["p95_ms_median"], ep1_n["p95_ms_median"],
         )
         dk_at[(mode, endpoint, users)] = point
+        members = pair_sets[endpoint]
+        verdict_vu, consistency_vu = pair_levels(members)
         in_set = users in members
         role = "observation"
         if verdict_vu is not None and users == verdict_vu:
@@ -703,39 +751,38 @@ def h3_table(summary, rows):
         print(f"{mode:9} {endpoint:8} {users:>4} {lar['p95_ms_median']:>8.1f} {nest['p95_ms_median']:>8.1f} "
               f"{ratio_s:>6} {point:>8.2f} {lo_s:>8} {hi_s:>8}  {role}")
 
-    if verdict_vu is None or consistency_vu is None:
-        print("H3 verdict: not evaluable")
-        return
-
-    modes = sorted({m for m, _, _ in dk_at})
+    modes = sorted({m for m, _, _ in dk_at}) or ["isolated"]
     for mode in modes:
-        lower_ok = True
-        upper_reject = False
-        signs_ok = True
+        per_k = {}
         for endpoint in H3_ENDPOINTS:
-            ci = ci_at.get((mode, endpoint, verdict_vu))
-            point_v = dk_at.get((mode, endpoint, verdict_vu))
-            point_c = dk_at.get((mode, endpoint, consistency_vu))
-            if ci is None or point_v is None or point_c is None:
-                lower_ok = False
-                signs_ok = False
+            members = pair_sets[endpoint]
+            verdict_vu, consistency_vu = pair_levels(members)
+            if verdict_vu is None:
+                per_k[endpoint] = "not evaluable"
+                print(f"H3 {endpoint} ({mode}): not evaluable")
                 continue
-            lo, hi = ci
-            if lo <= y:
-                lower_ok = False
-            if hi < y:
-                upper_reject = True
-            if point_v == 0 or point_c == 0 or (point_v > 0) != (point_c > 0):
-                signs_ok = False
-        if lower_ok and signs_ok:
-            verdict = "supported"
-        elif upper_reject:
+            ci = ci_at.get((mode, endpoint, verdict_vu))
+            lo, hi = (None, None) if ci is None else ci
+            per_k[endpoint] = classify_d_k(
+                lo, hi, y,
+                dk_at.get((mode, endpoint, verdict_vu)),
+                dk_at.get((mode, endpoint, consistency_vu)),
+            )
+            print(f"H3 {endpoint} ({mode}): {per_k[endpoint]} "
+                  f"at {verdict_vu} VU (consistency {consistency_vu} VU)")
+
+        evaluable = {k: v for k, v in per_k.items() if v != "not evaluable"}
+        if any(per_k[k] == "not evaluable" for k in H3_REQUIRED):
+            verdict = "not evaluable"
+        elif any(v == "rejected" for v in evaluable.values()):
             verdict = "rejected"
+        elif evaluable and all(v == "supported" for v in evaluable.values()):
+            verdict = "supported"
         else:
             verdict = "inconclusive"
-        print(f"H3 verdict ({mode}): {verdict} "
-              f"(all three lower CI bounds > Y at {verdict_vu} VU: {lower_ok}; "
-              f"same sign at {consistency_vu} VU: {signs_ok})")
+        skipped = [k for k in H3_ENDPOINTS if per_k[k] == "not evaluable"]
+        note = f" ({', '.join(skipped)} reported as observation)" if skipped else ""
+        print(f"H3 verdict ({mode}): {verdict}{note}")
 
 
 def print_query_counts(scenario_dir):
