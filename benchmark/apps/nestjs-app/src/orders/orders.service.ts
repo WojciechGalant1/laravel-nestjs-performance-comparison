@@ -35,7 +35,8 @@ export class OrdersService {
   // EP4: 3-level nested eager load. The order row itself is already resolved by
   // BindOrderGuard (excluded from the S3 counter, like Laravel route-model
   // binding). Only relation hydration queries are issued here, sequentially,
-  // matching Eloquent's $order->load(['table', 'waiter', 'orderItems.menuItem.dish']).
+  // covering the same relation paths as Eloquent's
+  // $order->load(['table', 'waiter', 'orderItems.menuItem.dish']).
   async show(user: AuthUser, order: Order): Promise<Order> {
     this.authorizeOwnership(user, order);
 

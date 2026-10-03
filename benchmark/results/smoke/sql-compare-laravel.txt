@@ -1,0 +1,48 @@
+# laravel  repeats=20  2026-10-03T19:50:04Z
+
+## EP1 /api/tables?page=1  http=200  X-Query-Count=2  (counted request used the debug header; timed series did not)
+
+ calls | total_ms | mean_ms | ms_per_req |                                 query                                 
+-------+----------+---------+------------+-----------------------------------------------------------------------
+    20 |    0.441 |   0.022 |      0.022 | select * from "tables" order by "table_number" asc limit $1 offset $2
+    20 |    0.411 |   0.021 |      0.021 | select count(*) as "aggregate" from "tables"
+    20 |    0.172 |   0.009 |      0.009 | set search_path to "public"
+(3 rows)
+
+
+## EP3 /api/orders?page=1  http=200  X-Query-Count=4  (counted request used the debug header; timed series did not)
+
+ calls | total_ms | mean_ms | ms_per_req |                                                                query                                                                 
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------
+    20 |   94.801 |   4.740 |      4.740 | select count(*) as "aggregate" from "orders"
+    20 |    0.877 |   0.044 |      0.044 | select * from "orders" order by "ordered_at" desc limit $1 offset $2
+    20 |    0.806 |   0.040 |      0.040 | select * from "users" where "users"."id" in ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+    20 |    0.577 |   0.029 |      0.029 | select * from "tables" where "tables"."id" in ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+    20 |    0.175 |   0.009 |      0.009 | set search_path to "public"
+(5 rows)
+
+
+## EP4 /api/orders/1  http=200  X-Query-Count=5  (counted request used the debug header; timed series did not)
+
+ calls | total_ms | mean_ms | ms_per_req |                               query                                
+-------+----------+---------+------------+--------------------------------------------------------------------
+    20 |    0.423 |   0.021 |      0.021 | select * from "orders" where "id" = $1 limit $2
+    20 |    0.307 |   0.015 |      0.015 | select * from "order_items" where "order_items"."order_id" in ($1)
+    20 |    0.229 |   0.011 |      0.011 | select * from "tables" where "tables"."id" in ($1)
+    20 |    0.201 |   0.010 |      0.010 | select * from "dishes" where "dishes"."id" in ($1)
+    20 |    0.190 |   0.010 |      0.010 | select * from "users" where "users"."id" in ($1)
+    20 |    0.189 |   0.009 |      0.009 | select * from "menu_items" where "menu_items"."id" in ($1)
+    20 |    0.169 |   0.008 |      0.008 | set search_path to "public"
+(7 rows)
+
+
+## EP5 /api/dishes/1/ingredients  http=200  X-Query-Count=1  (counted request used the debug header; timed series did not)
+
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                            query                                                                                                                                                                                                                             
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    1.078 |   0.054 |      0.054 | select "ingredients".*, "dish_ingredients"."dish_id" as "pivot_dish_id", "dish_ingredients"."ingredient_id" as "pivot_ingredient_id", "dish_ingredients"."quantity" as "pivot_quantity", "dish_ingredients"."created_at" as "pivot_created_at", "dish_ingredients"."updated_at" as "pivot_updated_at" from "ingredients" inner join "dish_ingredients" on "ingredients"."id" = "dish_ingredients"."ingredient_id" where "dish_ingredients"."dish_id" in ($1)
+    20 |    0.527 |   0.026 |      0.026 | select * from "dishes" where "id" = $1 limit $2
+    20 |    0.182 |   0.009 |      0.009 | set search_path to "public"
+(3 rows)
+
+

@@ -16,7 +16,8 @@ type IngredientWithPivot = Ingredient & {
 export class DishesService {
   // EP5: ingredients via the dish_ingredients pivot. The dish row is already
   // resolved by BindDishGuard (excluded from the S3 counter). A single JOIN
-  // query hydrates the N:M relation, matching Eloquent's $dish->load('ingredients').
+  // query hydrates the same N:M relation as Eloquent's $dish->load('ingredients');
+  // the generated SQL projection is ORM-specific and is reported out of band.
   async ingredients(dish: Dish): Promise<Dish> {
     const { entities, raw } = await Ingredient.createQueryBuilder('ingredients')
       .innerJoin(

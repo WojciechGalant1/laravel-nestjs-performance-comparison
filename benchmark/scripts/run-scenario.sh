@@ -117,8 +117,8 @@ align_nestjs_pool() {
 docker compose --profile loadtest build -q jmeter
 
 desired_pool="${DB_POOL_SIZE:-10}"
-out_name="$scenario"
-if [ "$scenario" = s2 ] && [ "$desired_pool" != 10 ]; then
+out_name="${OUT_NAME:-$scenario}"
+if [ -z "${OUT_NAME:-}" ] && [ "$scenario" = s2 ] && [ "$desired_pool" != 10 ]; then
     out_name="s2-pool${desired_pool}"
 fi
 
