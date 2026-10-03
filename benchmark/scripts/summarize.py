@@ -14,7 +14,9 @@ per request figures are printed for every scenario and do not decide a verdict.
 
 Definitions (Sections 3.3, 3.5 and 3.6 of the methodology):
 - The ramp-up is excluded: the steady-state window starts rampup_s after the first
-  measured sample and ends with the last completed sample.
+  measured sample and ends duration_s after that same first sample (the scheduled
+  JMeter duration, not the last in-flight completion). Throughput is successful
+  samples that started inside that interval, divided by (duration_s − rampup_s).
 - Percentiles use the nearest-rank method over all samples of a label in the window.
 - Throughput counts successful samples only; the error rate counts every failed
   sample (assertion failures, HTTP errors and timeouts).
@@ -139,9 +141,10 @@ def summarise_run(run_dir):
     samples = read_samples(run_dir / "results.jtl")
     if not samples:
         return []
-    window_start = min(s["start"] for s in samples) + meta["rampup_s"] * 1000
-    steady = [s for s in samples if s["start"] >= window_start]
-    window_end = max(s["start"] + s["elapsed"] for s in steady)
+    t0 = min(s["start"] for s in samples)
+    window_start = t0 + meta["rampup_s"] * 1000
+    window_end = t0 + meta["duration_s"] * 1000
+    steady = [s for s in samples if window_start <= s["start"] < window_end]
     window_s = (window_end - window_start) / 1000
 
     offset = meta["clock_offset_s"]

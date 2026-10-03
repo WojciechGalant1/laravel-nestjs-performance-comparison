@@ -50,6 +50,8 @@ services:
       - work_mem=4MB
       - -c
       - effective_cache_size=4GB
+      - -c
+      - shared_preload_libraries=pg_stat_statements
     environment:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
