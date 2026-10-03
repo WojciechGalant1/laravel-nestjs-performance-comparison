@@ -7,6 +7,7 @@ use App\Enums\OrderStatus;
 use App\Exceptions\BusinessRuleException;
 use App\Models\MenuItem;
 use App\Models\Order;
+use App\Models\Table;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -24,6 +25,10 @@ class OrderService
     {
         return DB::transaction(function () use ($data, $waiter) {
             $menuItemIds = collect($data['items'])->pluck('menu_item_id')->unique()->values();
+            if (!Table::whereKey($data['table_id'])->exists()) {
+                throw new BusinessRuleException('The selected table does not exist.', 422);
+            }
+
             $menuItems = MenuItem::whereIn('id', $menuItemIds)
                 ->where('is_available', true)
                 ->get()
@@ -41,23 +46,24 @@ class OrderService
                 'ordered_at' => now(),
             ]);
 
+            $orderItems = collect();
             foreach ($data['items'] as $item) {
                 $menuItem = $menuItems->get($item['menu_item_id']);
 
-                $order->orderItems()->create([
+                $orderItems->push($order->orderItems()->create([
                     'menu_item_id' => $item['menu_item_id'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $menuItem->price,
                     'notes' => $item['notes'] ?? null,
                     'status' => OrderItemStatus::Pending,
-                ]);
+                ]));
             }
 
-            $order->update([
-                'total_price' => $order->orderItems->sum(
+            $total = $orderItems->sum(
                     fn($i) => $i->quantity * $i->unit_price,
-                ),
-            ]);
+                );
+            $order->update(['total_price' => $total]);
+            $order->setRelation('orderItems', $orderItems);
 
             return $order;
         });

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# One-off: X-Query-Count plus pg_stat_statements for EP1/EP3/EP4/EP5.
+# One-off: X-Query-Count plus all pg_stat_statements entries for EP2/EP1/EP3/EP4/EP5/EP6/EP7/EP8/EP9.
 # Usage: scripts/sql-compare.sh <laravel|nestjs> [repeats]
-# The chosen stack must already be running. Writes results/smoke/sql-compare-<fw>.txt
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -32,13 +31,18 @@ login=$(docker compose exec -T "$nginx" curl -fsS \
 token=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["access_token"])' "$login")
 
 hit() {
-    local path="$1" debug="${2:-}"
+    local path="$1" debug="${2:-}" method="${3:-GET}" body="${4:-}"
     local headers=(-H "Authorization: Bearer ${token}" -H 'Accept: application/json')
+    local body_args=()
     if [ -n "$debug" ]; then
         headers+=(-H 'X-Debug-Queries: 1')
     fi
+    if [ "$method" = POST ] || [ "$method" = PATCH ]; then
+        headers+=(-H 'Content-Type: application/json')
+        body_args=(-d "$body")
+    fi
     docker compose exec -T "$nginx" curl -sS -D - -o /tmp/sql-compare-body \
-        "${headers[@]}" "http://localhost${path}"
+        -X "$method" "${body_args[@]}" "${headers[@]}" "http://localhost${path}"
 }
 
 mkdir -p results/smoke
@@ -48,34 +52,58 @@ out="results/smoke/sql-compare-${framework}.txt"
     echo
 } >"$out"
 
-# Warm the workers / pools so PREPARE and JIT are not in the sample.
-for path in "/api/tables?page=1" "/api/orders?page=1" "/api/orders/1" "/api/dishes/1/ingredients"; do
+# Warm workers and pools before the measured window.
+for path in "/api/menu-items?page=1" "/api/tables?page=1" "/api/orders?page=1" "/api/orders/1" "/api/dishes/1/ingredients" "/api/dashboard/summary" "/api/orders/1/status" "/api/reservations"; do
     hit "$path" >/dev/null
 done
 
 for spec in \
+    "EP2 /api/menu-items?page=1" \
     "EP1 /api/tables?page=1" \
     "EP3 /api/orders?page=1" \
     "EP4 /api/orders/1" \
-    "EP5 /api/dishes/1/ingredients"
+    "EP5 /api/dishes/1/ingredients" \
+    "EP6 /api/dashboard/summary" \
+    "EP7 /api/orders" \
+    "EP8 /api/orders/1/status" \
+    "EP9 /api/reservations"
 do
     label=${spec%% *}
     path=${spec#* }
+    method=GET
+    body=
+    series_repeats="$repeats"
+    if [ "$label" = EP7 ]; then
+        method=POST
+        body='{"table_id":1,"items":[{"menu_item_id":1,"quantity":1}]}'
+    elif [ "$label" = EP8 ]; then
+        method=PATCH
+        body='{"status":"paid"}'
+    elif [ "$label" = EP9 ]; then
+        method=POST
+        body='{"table_id":1,"customer_name":"SQL Compare","phone_number":"+48000000003","reservation_date":"2099-01-03","reservation_time":"12:00","party_size":2,"duration_minutes":30}'
+        series_repeats=1
+    fi
 
-    headers=$(hit "$path" debug)
+    headers=$(hit "$path" debug "$method" "$body")
     code=$(printf '%s\n' "$headers" | awk 'toupper($1) ~ /^HTTP/ { code=$2 } END { print code }')
     count=$(printf '%s\n' "$headers" | awk 'tolower($1) ~ /^x-query-count:/ { print $2 }' | tr -d '\r')
     [ -n "$count" ] || count="missing"
 
+    # This reset is immediately before the measured request window.
     psql -c "SELECT pg_stat_statements_reset();" >/dev/null
-    for _ in $(seq 1 "$repeats"); do
-        hit "$path" >/dev/null
+    for _ in $(seq 1 "$series_repeats"); do
+        hit "$path" "" "$method" "$body" >/dev/null
     done
 
     {
-        echo "## ${label} ${path}  http=${code}  X-Query-Count=${count}  (counted request used the debug header; timed series did not)"
+        echo "## ${label} ${method} ${path}  http=${code}  X-Query-Count=${count}"
         echo
-        psql -c "SELECT calls, ROUND(total_exec_time::numeric, 3) AS total_ms, ROUND(mean_exec_time::numeric, 3) AS mean_ms, ROUND(total_exec_time::numeric / ${repeats}, 3) AS ms_per_req, query FROM pg_stat_statements WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database()) AND query NOT LIKE '%pg_stat_statements%' ORDER BY total_exec_time DESC;"
+        echo "### All tracked statements (including utility statements)"
+        psql -c "SELECT calls, ROUND(total_exec_time::numeric, 3) AS total_ms, ROUND(mean_exec_time::numeric, 3) AS mean_ms, ROUND(total_exec_time::numeric / ${series_repeats}, 3) AS ms_per_req, query FROM pg_stat_statements WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database()) AND query NOT LIKE '%pg_stat_statements%' ORDER BY total_exec_time DESC;"
+        echo
+        echo "### Calls per request by statement class"
+        psql -c "SELECT ROUND(SUM(calls)::numeric / ${series_repeats}, 3) AS calls_per_request, COUNT(*) AS tracked_statement_forms, COUNT(*) FILTER (WHERE query ~* '^(set|reset|deallocate|begin|start transaction|commit|rollback|prepare|execute)([[:space:]]|\$)') AS utility_statement_forms, ROUND(SUM(calls) FILTER (WHERE query ~* '^(set|reset|deallocate|begin|start transaction|commit|rollback|prepare|execute)([[:space:]]|\$)')::numeric / ${series_repeats}, 3) AS utility_calls_per_request FROM pg_stat_statements WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database()) AND query NOT LIKE '%pg_stat_statements%';"
         echo
     } >>"$out"
 
