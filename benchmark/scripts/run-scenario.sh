@@ -2,7 +2,7 @@
 # Run one measurement scenario as described in metodyka.md (Sections 3.3 and 3.6).
 # For every endpoint x concurrency level x repetition:
 #   1. scripts/db-reset.sh: restore the database from its template, restart the app
-#   2. warm-up run (results discarded)
+#   2. warm-up run (results retained only for integrity checks)
 #   3. docker stats streamed to stats.csv for the duration of the measurement
 #   4. measurement run, written to results.jtl
 #   5. meta.json with the parameters and the effective container limits
@@ -239,6 +239,10 @@ run_one() {
     local pool_size="n/a"
     [ "$framework" = nestjs ] && pool_size=$(docker compose exec -T nestjs-app printenv DB_POOL_SIZE)
     local app_cpus app_mem_mib image postgres_cpus
+    local git_commit laravel_tree nestjs_tree
+    git_commit=$(git rev-parse HEAD)
+    laravel_tree=$(git rev-parse HEAD:benchmark/apps/laravel-app)
+    nestjs_tree=$(git rev-parse HEAD:benchmark/apps/nestjs-app)
     app_cpus=$(awk -v n="$(inspect '{{.HostConfig.NanoCpus}}')" 'BEGIN { print n / 1e9 }')
     app_mem_mib=$(( $(inspect '{{.HostConfig.Memory}}') / 1024 / 1024 ))
     image=$(inspect '{{.Image}}')
@@ -255,8 +259,10 @@ run_one() {
         if ! grep -q "\"warmup_s\": ${WARMUP}," "${dir}/meta.json" \
             || ! grep -q "\"duration_s\": ${DURATION}," "${dir}/meta.json" \
             || ! grep -q "\"rampup_s\": ${RAMPUP}," "${dir}/meta.json" \
-            || ! grep -q "\"db_pool_size\": \"${pool_size}\"," "${dir}/meta.json"; then
-            echo "${dir} holds a run with different WARMUP/DURATION/RAMPUP or DB_POOL_SIZE; move it away first." >&2
+            || ! grep -q "\"db_pool_size\": \"${pool_size}\"," "${dir}/meta.json" \
+            || ! grep -q "\"git_commit\": \"${git_commit}\"," "${dir}/meta.json" \
+            || ! grep -q "\"${framework}_app_tree\": \"$( [ "$framework" = laravel ] && printf '%s' "$laravel_tree" || printf '%s' "$nestjs_tree" )\"," "${dir}/meta.json"; then
+            echo "${dir} holds a run with different parameters or source revision; move it away first." >&2
             exit 1
         fi
         echo "[${done_runs}/${total}] ${dir}: already complete, skipped"
@@ -268,10 +274,13 @@ run_one() {
     echo "[${done_runs}/${total}] ${framework} ${out_name} ${ep} vu=${vu} rep=${rep} (about ${eta} min left)"
 
     scripts/db-reset.sh "$framework" >/dev/null
+    db="${framework}_app"
+    local baseline_counts warmup_successes measurement_successes expected_orders expected_items expected_reservations
+    baseline_counts=$(row_counts "$db" | tr -d '\r\n ')
 
     jmeter -Jendpoint="$ep" -Jusers="$vu" -Jduration="$WARMUP" \
         "${warmup_ep9[@]}" \
-        -j "${container_dir}/warmup.log" >/dev/null
+        -l "${container_dir}/warmup.jtl" -j "${container_dir}/warmup.log" >/dev/null
 
     local offset started finished status measure_name mpid jid db counts
     offset=$(clock_offset)
@@ -295,12 +304,45 @@ run_one() {
     finished="$EPOCHREALTIME"
     stop_stats
 
-    if ! grep -q ',SETUP_login,200,' "${dir}/results.jtl" 2>/dev/null; then
+    if ! grep -q ',SETUP_login,200,' "${dir}/results.jtl" 2>/dev/null \
+        || ! grep -q ',SETUP_login,200,' "${dir}/warmup.jtl" 2>/dev/null; then
         status=failed
     fi
 
-    db="${framework}_app"
     counts=$(row_counts "$db" | tr -d '\r\n ')
+
+    warmup_successes=$(awk -F, -v ep="$ep" '$3 == ep && $4 == 201 { n++ } END { print n + 0 }' \
+        "${dir}/warmup.jtl")
+    measurement_successes=$(awk -F, -v ep="$ep" '$3 == ep && $4 == 201 { n++ } END { print n + 0 }' \
+        "${dir}/results.jtl")
+    expected_orders=0
+    expected_items=0
+    expected_reservations=0
+    if [ "$ep" = EP7 ]; then
+        expected_orders=$((warmup_successes + measurement_successes))
+        expected_items="$expected_orders"
+    elif [ "$ep" = EP9 ]; then
+        expected_reservations=$((warmup_successes + measurement_successes))
+    fi
+
+    json_count() {
+        printf '%s\n' "$1" | sed -n "s/.*\"$2\":\([0-9][0-9]*\).*/\1/p"
+    }
+    baseline_orders=$(json_count "$baseline_counts" orders)
+    final_orders=$(json_count "$counts" orders)
+    baseline_items=$(json_count "$baseline_counts" order_items)
+    final_items=$(json_count "$counts" order_items)
+    baseline_reservations=$(json_count "$baseline_counts" reservations)
+    final_reservations=$(json_count "$counts" reservations)
+    integrity=pass
+    [ $((final_orders - baseline_orders)) -eq "$expected_orders" ] || integrity=fail
+    [ $((final_items - baseline_items)) -eq "$expected_items" ] || integrity=fail
+    [ $((final_reservations - baseline_reservations)) -eq "$expected_reservations" ] || integrity=fail
+    if [ "$integrity" != pass ]; then
+        status=failed
+        echo "Integrity gate failed for ${dir}: baseline=${baseline_counts} final=${counts} " \
+            "expected201=${warmup_successes}+${measurement_successes}" >&2
+    fi
 
     cat >"${dir}/meta.json" <<EOF
 {
@@ -324,6 +366,16 @@ run_one() {
   "app_image": "${image}",
   "interleave_seed": ${INTERLEAVE_SEED},
   "framework_order": "${order}",
+  "git_commit": "${git_commit}",
+  "laravel_app_tree": "${laravel_tree}",
+  "nestjs_app_tree": "${nestjs_tree}",
+  "integrity_gate": "${integrity}",
+  "warmup_201": ${warmup_successes},
+  "measurement_201": ${measurement_successes},
+  "expected_order_rows": ${expected_orders},
+  "expected_order_item_rows": ${expected_items},
+  "expected_reservation_rows": ${expected_reservations},
+  "baseline_row_counts": ${baseline_counts:-null},
   "row_counts": ${counts:-null}
 }
 EOF

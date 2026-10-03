@@ -57,6 +57,11 @@ export class OrdersService {
     return this.dataSource.transaction(async (manager) => {
       const menuItemIds = [...new Set(dto.items.map((item) => item.menu_item_id))];
 
+      const table = await manager.findOneBy(RestaurantTable, { id: dto.table_id });
+      if (!table) {
+        throw new BusinessRuleException('The selected table does not exist.', 422);
+      }
+
       const menuItems = await manager.find(MenuItem, {
         where: { id: In(menuItemIds), isAvailable: true },
       });
@@ -74,7 +79,7 @@ export class OrdersService {
         totalPrice: '0',
         orderedAt: new Date(),
       });
-      await manager.save(order);
+      const savedOrder = await manager.save(order);
 
       // Accumulate the total in integer cents to avoid floating-point drift.
       let totalCents = 0;
@@ -83,7 +88,7 @@ export class OrdersService {
         totalCents += Math.round(parseFloat(unitPrice) * 100) * item.quantity;
 
         return manager.create(OrderItem, {
-          orderId: order.id,
+          orderId: savedOrder.id,
           menuItemId: item.menu_item_id,
           quantity: item.quantity,
           unitPrice,
@@ -93,11 +98,13 @@ export class OrdersService {
       });
       await manager.save(items);
 
-      order.totalPrice = (totalCents / 100).toFixed(2);
-      await manager.save(order);
+      savedOrder.totalPrice = (totalCents / 100).toFixed(2);
+      await manager.update(Order, savedOrder.id, {
+        totalPrice: savedOrder.totalPrice,
+      });
 
-      order.orderItems = items;
-      return order;
+      savedOrder.orderItems = items;
+      return savedOrder;
     });
   }
 
