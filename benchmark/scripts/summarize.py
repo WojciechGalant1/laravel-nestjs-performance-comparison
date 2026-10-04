@@ -8,7 +8,7 @@ Usage:
 Writes results/<scenario>/runs.csv (one row per repetition and endpoint label) and
 results/<scenario>/summary.csv (median and standard deviation across repetitions).
 S1 prints the H1 table (low-load set, bootstrap CI of |Δp95|). S2 prints the H2
-table (p95 slope below saturation). S3 prints the H3 table (signed D_k, bootstrap
+table (bootstrap CI for the p95 slope ratio). S3 prints the H3 table (absolute D_k with signed-direction checks, bootstrap
 CI, threshold Y from results/h3_threshold.json). Secondary Little's-law and CPU
 per request figures are printed for every scenario and do not decide a verdict.
 
@@ -46,272 +46,22 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent / "results"
-SETUP_LABELS = {"SETUP_login"}
-H1_LIMIT_PCT = 15.0
-H1_ERROR_LIMIT_PCT = 1.0
-H1_ENDPOINTS = ("EP1", "EP2", "EP8")
-H3_ENDPOINTS = ("EP4", "EP5", "EP6")
-H3_REQUIRED = ("EP4", "EP5")
-S3_ENDPOINTS = ("EP1", "EP4", "EP5", "EP6")
-H2_SATURATION_PCT = 5.0
-H2_SLOPE_MIN_VU = 200
-PLANNED_VU = (1, 2, 4, 10)
-LOWLOAD_SCALING_MIN = 0.80
-LOWLOAD_CPU_SHARE_MAX = 0.80
-JMETER_CPU_FLAG_PCT = 80.0
-BOOTSTRAP_N = 10_000
-BOOTSTRAP_SEED = 20261002
-H3_THRESHOLD_PATH = ROOT / "h3_threshold.json"
-H3_Y_FLOOR_MS = 2.0
-H3_Y_K = 2.0
-
-UNITS = {
-    "B": 1 / 1024**2, "KiB": 1 / 1024, "MiB": 1, "GiB": 1024,
-    "kB": 1000 / 1024**2, "MB": 1000**2 / 1024**2, "GB": 1000**3 / 1024**2,
-}
-
-
-def to_mib(value):
-    for unit in sorted(UNITS, key=len, reverse=True):
-        if value.endswith(unit):
-            return float(value[: -len(unit)]) * UNITS[unit]
-    raise ValueError(f"unknown memory unit: {value}")
-
-
-def percentile(sorted_values, p):
-    rank = max(1, math.ceil(p / 100 * len(sorted_values)))
-    return sorted_values[rank - 1]
-
-
-def read_samples(jtl):
-    with jtl.open(newline="") as fh:
-        return [
-            {
-                "start": int(row["timeStamp"]),
-                "elapsed": int(row["elapsed"]),
-                "label": row["label"],
-                "success": row["success"] == "true",
-            }
-            for row in csv.DictReader(fh)
-            if row["label"] not in SETUP_LABELS
-        ]
-
-
-def container_role(name):
-    for role in ("jmeter", "nginx", "postgres", "app"):
-        if f"-{role}-" in name or name.endswith(role) or name.endswith(f"-{role}"):
-            return role
-    return name
-
-
-def container_stats(stats_csv, window_wsl, cpus, postgres_cpus=None):
-    """Mean and peak per container over the load window (WSL clock)."""
-    lo, hi = window_wsl
-    per = defaultdict(lambda: {"cpu": [], "mem": []})
-    with stats_csv.open(newline="") as fh:
-        for row in csv.DictReader(fh):
-            if lo <= float(row["epoch"]) <= hi:
-                per[row["name"]]["cpu"].append(float(row["cpu_perc"]))
-                per[row["name"]]["mem"].append(to_mib(row["mem_usage"]))
-
-    out = {}
-    for name, values in per.items():
-        role = container_role(name)
-        if not values["cpu"]:
-            continue
-        out[f"{role}_cpu_mean"] = statistics.fmean(values["cpu"])
-        out[f"{role}_cpu_peak"] = max(values["cpu"])
-        out[f"{role}_mem_mean_mib"] = statistics.fmean(values["mem"])
-        out[f"{role}_mem_peak_mib"] = max(values["mem"])
-    if "app_cpu_mean" in out:
-        out["app_cpu_share_pct"] = out["app_cpu_mean"] / (100.0 * cpus)
-    pg_cpus = postgres_cpus if postgres_cpus else cpus
-    if "postgres_cpu_mean" in out and pg_cpus:
-        out["postgres_cpu_share_pct"] = out["postgres_cpu_mean"] / (100.0 * pg_cpus)
-    return out
-
-
-def summarise_run(run_dir):
-    meta = json.loads((run_dir / "meta.json").read_text())
-    if meta["status"] != "complete":
-        return []
-
-    samples = read_samples(run_dir / "results.jtl")
-    if not samples:
-        return []
-    t0 = min(s["start"] for s in samples)
-    window_start = t0 + meta["rampup_s"] * 1000
-    window_end = t0 + meta["duration_s"] * 1000
-    steady = [s for s in samples if window_start <= s["start"] < window_end]
-    window_s = (window_end - window_start) / 1000
-
-    offset = meta["clock_offset_s"]
-    stats = container_stats(
-        run_dir / "stats.csv",
-        (window_start / 1000 - offset, window_end / 1000 - offset),
-        meta["app_cpus"],
-        meta.get("postgres_cpus") or meta["app_cpus"],
-    )
-
-    extra = {}
-    if "interleave_seed" in meta:
-        extra["interleave_seed"] = meta["interleave_seed"]
-    if "framework_order" in meta:
-        extra["framework_order"] = meta["framework_order"]
-    counts = meta.get("row_counts")
-    if isinstance(counts, dict):
-        extra["orders_count"] = counts.get("orders")
-        extra["order_items_count"] = counts.get("order_items")
-        extra["reservations_count"] = counts.get("reservations")
-
-    rows = []
-    by_label = defaultdict(list)
-    for s in steady:
-        by_label[s["label"]].append(s)
-    for label, group in sorted(by_label.items()):
-        elapsed = sorted(s["elapsed"] for s in group)
-        ok = sum(s["success"] for s in group)
-        rps = ok / window_s
-        row = {
-            "scenario": meta["scenario"],
-            "mode": meta["mode"],
-            "framework": meta["framework"],
-            "endpoint": label,
-            "users": meta["users"],
-            "repetition": meta["repetition"],
-            "samples": len(group),
-            "window_s": round(window_s, 3),
-            "p50_ms": percentile(elapsed, 50),
-            "p95_ms": percentile(elapsed, 95),
-            "p99_ms": percentile(elapsed, 99),
-            "throughput_rps": rps,
-            "error_rate_pct": 100 * (len(group) - ok) / len(group),
-            **stats,
-            **extra,
-        }
-        if rps > 0:
-            row["little_ms"] = meta["users"] / rps * 1000
-            if "app_cpu_mean" in stats:
-                row["cpu_per_request_ms"] = stats["app_cpu_mean"] / 100 * 1000 / rps
-        rows.append(row)
-    return rows
-
-
-def write_csv(path, rows):
-    fields = []
-    for row in rows:
-        fields += [k for k in row if k not in fields]
-    with path.open("w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fields)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({k: (f"{v:.3f}" if isinstance(v, float) else v) for k, v in row.items()})
-
-
-def aggregate(rows):
-    keys = ("scenario", "mode", "framework", "endpoint", "users")
-    groups = defaultdict(list)
-    for row in rows:
-        groups[tuple(row[k] for k in keys)].append(row)
-
-    skip = set(keys) | {"repetition", "samples", "window_s", "framework_order",
-                       "interleave_seed", "postgres_cpus"}
-    summary = []
-    for key, group in sorted(groups.items()):
-        out = dict(zip(keys, key))
-        out["repetitions"] = len(group)
-        metrics = [k for k in group[0] if k not in skip and isinstance(group[0].get(k), (int, float))]
-        for metric in metrics:
-            values = [r[metric] for r in group if isinstance(r.get(metric), (int, float))]
-            if not values:
-                continue
-            out[f"{metric}_median"] = statistics.median(values)
-            out[f"{metric}_sd"] = statistics.stdev(values) if len(values) > 1 else 0.0
-        summary.append(out)
-    return summary
-
-
-def rel_delta_pct(a, b):
-    mean = (a + b) / 2
-    return 0.0 if mean == 0 else 100 * abs(a - b) / mean
-
-
-def ratio(a, b):
-    if a is None or b is None or b == 0:
-        return None
-    return a / b
-
-
-def fmt_ratio(value):
-    if value is None or (isinstance(value, float) and math.isnan(value)):
-        return "n/d"
-    return f"{value:.2f}x"
-
-
-def signed_gap(lar_p95, nest_p95):
-    return lar_p95 - nest_p95
-
-
-def d_k(lar_k, nest_k, lar_1, nest_1):
-    return signed_gap(lar_k, nest_k) - signed_gap(lar_1, nest_1)
-
-
-def summary_index(summary):
-    return {(r["mode"], r["endpoint"], int(r["users"]), r["framework"]): r for r in summary}
-
-
-def group_values(rows, mode, endpoint, users, framework, field="p95_ms"):
-    return [
-        r[field]
-        for r in rows
-        if r["mode"] == mode
-        and r["endpoint"] == endpoint
-        and int(r["users"]) == users
-        and r["framework"] == framework
-        and field in r
-    ]
-
-
-def percentile_ci(samples, lo=2.5, hi=97.5):
-    ordered = sorted(samples)
-    return percentile(ordered, lo), percentile(ordered, hi)
-
-
-def bootstrap_rel_delta(lar_vals, nest_vals, rng):
-    if not lar_vals or not nest_vals:
-        return None
-    stats = []
-    for _ in range(BOOTSTRAP_N):
-        lar = statistics.median(rng.choices(lar_vals, k=len(lar_vals)))
-        nest = statistics.median(rng.choices(nest_vals, k=len(nest_vals)))
-        stats.append(rel_delta_pct(lar, nest))
-    return percentile_ci(stats)
-
-
-def bootstrap_d_k(rows, mode, endpoint, users, rng):
-    groups = {
-        "l1": group_values(rows, mode, "EP1", users, "laravel"),
-        "n1": group_values(rows, mode, "EP1", users, "nestjs"),
-        "lk": group_values(rows, mode, endpoint, users, "laravel"),
-        "nk": group_values(rows, mode, endpoint, users, "nestjs"),
-    }
-    if not all(groups.values()):
-        return None
-    stats = []
-    for _ in range(BOOTSTRAP_N):
-        med = {key: statistics.median(rng.choices(vals, k=len(vals))) for key, vals in groups.items()}
-        stats.append(d_k(med["lk"], med["nk"], med["l1"], med["n1"]))
-    lo, hi = percentile_ci(stats)
-    point = d_k(
-        statistics.median(groups["lk"]),
-        statistics.median(groups["nk"]),
-        statistics.median(groups["l1"]),
-        statistics.median(groups["n1"]),
-    )
-    return point, lo, hi
-
+from summarize_common import (
+    BOOTSTRAP_SEED, H1_ENDPOINTS, H1_ERROR_LIMIT_PCT, H1_LIMIT_PCT,
+    H2_SATURATION_PCT, H2_SLOPE_MIN_VU, H3_CONSISTENCY_VU, H3_ENDPOINTS,
+    H3_PRIMARY_ENDPOINT, H3_THRESHOLD_PATH, H3_VERDICT_VU, H3_Y_FLOOR_MS,
+    H3_Y_K, JMETER_CPU_FLAG_PCT, LOWLOAD_CPU_SHARE_MAX,
+    LOWLOAD_SCALING_MIN, PLANNED_VU, ROOT,
+    d_k, fmt_number, fmt_ratio, group_values, metric_contrast, paired_summary,
+    sensitivity_contrast, signed_gap, summary_index,
+)
+from summarize_data import (
+    aggregate, coerce_run_row, load_runs, load_s1_rows, summarise_run, write_csv,
+)
+from summarize_stats import (
+    bootstrap_d_k, bootstrap_rel_delta, bootstrap_slope_ratio, percentile,
+    percentile_ci, ratio, rel_delta_pct, slope,
+)
 
 def prefix_of_planned(passing):
     """Longest prefix of the planned VU sequence in which every level passes."""
@@ -383,18 +133,23 @@ def print_lowload(members, diagnostics, label):
 
 
 def pair_levels(members):
-    if len(members) >= 2:
-        return members[-1], members[-2]
+    if list(members[:2]) == [H3_CONSISTENCY_VU, H3_VERDICT_VU]:
+        return H3_VERDICT_VU, H3_CONSISTENCY_VU
     return None, None
 
 
-def classify_d_k(lo, hi, y, point_v, point_c):
-    if lo is None or hi is None or point_v is None or point_c is None:
+def classify_d_k(lo, hi, y, point_v, point_c, direction_v, direction_c):
+    if (lo is None or hi is None or point_v is None or point_c is None
+            or direction_v is None or direction_c is None):
         return "not evaluable"
-    signs_ok = point_v != 0 and point_c != 0 and (point_v > 0) == (point_c > 0)
-    if lo > y and signs_ok:
+    direction_ok = direction_v and direction_c
+    if point_v <= 0 or point_c <= 0:
+        direction_ok = False
+    if lo > y and direction_ok:
         return "supported"
-    if hi < y:
+    if lo >= 0 and hi <= y:
+        return "not supported (effect below Y)"
+    if hi < 0:
         return "rejected"
     return "inconclusive"
 
@@ -437,19 +192,16 @@ def secondary_table(summary):
                 return None
             return value
 
-        def num(value, digits):
-            return "n/d" if value is None else f"{value:.{digits}f}"
-
         cpu_l, cpu_n = cell(lar, "cpu_per_request_ms_median"), cell(nest, "cpu_per_request_ms_median")
         p95_ratio = ratio(lar["p95_ms_median"], nest["p95_ms_median"])
         print(f"{mode:9} {endpoint:8} {users:>4} {lar['little_ms_median']:>8.2f} {nest['little_ms_median']:>8.2f} "
               f"{fmt_ratio(ratio(lar['little_ms_median'], nest['little_ms_median'])):>6} "
-              f"{num(cpu_l, 2):>7} {num(cpu_n, 2):>7} {fmt_ratio(ratio(cpu_l, cpu_n)):>6} "
+              f"{fmt_number(cpu_l):>7} {fmt_number(cpu_n):>7} {fmt_ratio(ratio(cpu_l, cpu_n)):>6} "
               f"{fmt_ratio(p95_ratio):>6} "
-              f"{num(cell(lar, 'app_cpu_mean_median'), 0):>6} {num(cell(nest, 'app_cpu_mean_median'), 0):>6} "
-              f"{num(cell(lar, 'nginx_cpu_mean_median'), 0):>6} {num(cell(nest, 'nginx_cpu_mean_median'), 0):>6} "
-              f"{num(cell(lar, 'postgres_cpu_mean_median'), 0):>6} {num(cell(nest, 'postgres_cpu_mean_median'), 0):>6} "
-              f"{num(cell(lar, 'jmeter_cpu_mean_median'), 0):>6} {num(cell(nest, 'jmeter_cpu_mean_median'), 0):>6}")
+              f"{fmt_number(cell(lar, 'app_cpu_mean_median'), 0):>6} {fmt_number(cell(nest, 'app_cpu_mean_median'), 0):>6} "
+              f"{fmt_number(cell(lar, 'nginx_cpu_mean_median'), 0):>6} {fmt_number(cell(nest, 'nginx_cpu_mean_median'), 0):>6} "
+              f"{fmt_number(cell(lar, 'postgres_cpu_mean_median'), 0):>6} {fmt_number(cell(nest, 'postgres_cpu_mean_median'), 0):>6} "
+              f"{fmt_number(cell(lar, 'jmeter_cpu_mean_median'), 0):>6} {fmt_number(cell(nest, 'jmeter_cpu_mean_median'), 0):>6}")
 
 
 def h1_table(summary, rows):
@@ -485,7 +237,9 @@ def h1_table(summary, rows):
         lo = hi = None
         if ci:
             lo, hi = ci
-        if not in_set:
+        if mode != "isolated":
+            tag = "observation"
+        elif not in_set:
             tag = "observation"
         else:
             had_verdict_row = True
@@ -523,18 +277,6 @@ def h1_table(summary, rows):
     print(f"H1 verdict: {verdict}{extra}")
 
 
-def slope(points):
-    """Least-squares slope of p95 (ms) against VU. None when fewer than two points."""
-    if len(points) < 2:
-        return None
-    xs = [vu for vu, _ in points]
-    ys = [p95 for _, p95 in points]
-    mean_x = sum(xs) / len(xs)
-    mean_y = sum(ys) / len(ys)
-    denom = sum((x - mean_x) ** 2 for x in xs)
-    if denom == 0:
-        return None
-    return sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys)) / denom
 
 
 def saturation_vu(by_vu):
@@ -545,12 +287,13 @@ def saturation_vu(by_vu):
     return None
 
 
-def h2_table(summary):
+
+
+def h2_table(summary, rows):
     index = {(r["mode"], r["endpoint"], int(r["users"]), r["framework"]): r for r in summary}
     groups = sorted({(mode, endpoint) for mode, endpoint, _, _ in index})
-    print(f"\nH2: p95 slope on VU >= {H2_SLOPE_MIN_VU} still below saturation "
-          f"(error <= {H2_SATURATION_PCT:g}%) is lower for NestJS; "
-          f"error rate lower at VU >= 500; saturation (error > {H2_SATURATION_PCT:g}%) at a higher VU")
+    print(f"\nH2: bootstrap 95% CI for slope ratio s_L/s_N on VU >= {H2_SLOPE_MIN_VU}; "
+          "this is the primary criterion")
     print("p99 is listed per VU and is not an input to the slope")
     header = (f"{'mode':9} {'endpoint':8} {'VU':>5} {'p95 L':>8} {'p95 N':>8} "
               f"{'p99 L':>8} {'p99 N':>8} {'err L%':>7} {'err N%':>7}")
@@ -575,19 +318,29 @@ def h2_table(summary):
 
         full = [(vu, lar[vu]["p95_ms_median"], nest[vu]["p95_ms_median"]) for vu in vus]
         sat_l, sat_n = saturation_vu(lar), saturation_vu(nest)
-        cut = min((s for s in (sat_l, sat_n) if s is not None), default=None)
-        verdict_pts = [p for p in full if p[0] >= H2_SLOPE_MIN_VU and (cut is None or p[0] < cut)]
+        verdict_pts = [p for p in full if p[0] >= H2_SLOPE_MIN_VU]
         slope_l = slope([(vu, p95) for vu, p95, _ in verdict_pts])
         slope_n = slope([(vu, p95) for vu, _, p95 in verdict_pts])
         full_l = slope([(vu, p95) for vu, p95, _ in full])
         full_n = slope([(vu, p95) for vu, _, p95 in full])
 
+        levels = [p[0] for p in verdict_pts]
+        slope_ci = bootstrap_slope_ratio(
+            rows, mode, endpoint, levels, random.Random(BOOTSTRAP_SEED)
+        )
+        if slope_ci is None:
+            slope_status = "inconclusive"
+        elif slope_ci[0] > 1:
+            slope_status = "supported"
+        elif slope_ci[1] < 1:
+            slope_status = "rejected"
+        else:
+            slope_status = "inconclusive"
         high = [vu for vu in vus if vu >= 500]
-        err_holds = bool(high) and all(nest[vu]["error_rate_pct_median"] < lar[vu]["error_rate_pct_median"] for vu in high)
-        slope_holds = slope_l is not None and slope_n is not None and slope_n < slope_l
-        rank = lambda s: math.inf if s is None else s
-        sat_holds = rank(sat_n) > rank(sat_l)
-        holds = slope_holds and err_holds and sat_holds
+        errors_observed = any(
+            lar[vu]["error_rate_pct_median"] > 0 or nest[vu]["error_rate_pct_median"] > 0
+            for vu in high
+        )
 
         def fmt_slope(value):
             return "n/d" if value is None else f"{value:.4f}"
@@ -595,10 +348,11 @@ def h2_table(summary):
         def fmt_sat(value):
             return "brak" if value is None else str(value)
 
-        print(f"         slope full {fmt_slope(full_l)} / {fmt_slope(full_n)} ms/VU (L/N, not in the verdict), "
-              f"VU>={H2_SLOPE_MIN_VU} below saturation {fmt_slope(slope_l)} / {fmt_slope(slope_n)}, "
-              f"saturation {fmt_sat(sat_l)} / {fmt_sat(sat_n)}  "
-              f"{'holds' if holds else 'rejected'}")
+        ci_s = "n/d" if slope_ci is None else f"[{slope_ci[0]:.3f}, {slope_ci[1]:.3f}]"
+        err_s = "reported" if errors_observed else "n/a (both zero)"
+        print(f"         slope full {fmt_slope(full_l)} / {fmt_slope(full_n)} ms/VU (L/N, descriptive), "
+              f"ratio CI {ci_s}, primary {slope_status}; "
+              f"saturation {fmt_sat(sat_l)} / {fmt_sat(sat_n)}, errors {err_s} (supplementary)")
 
 
 def git_hash():
@@ -613,31 +367,10 @@ def git_hash():
         return "unknown"
 
 
-def load_runs(scenario_dir):
-    run_dirs = sorted(p.parent for p in scenario_dir.glob("*/*/vu*/rep*/meta.json"))
-    return [row for run_dir in run_dirs for row in summarise_run(run_dir)]
 
 
-def coerce_run_row(row):
-    out = dict(row)
-    for key, cast in (("users", int), ("repetition", int), ("p95_ms", float),
-                      ("throughput_rps", float), ("error_rate_pct", float),
-                      ("app_cpu_share_pct", float), ("app_cpu_mean", float),
-                      ("postgres_cpu_share_pct", float), ("postgres_cpu_mean", float)):
-        if key in out and out[key] not in ("", None):
-            out[key] = cast(out[key])
-    return out
 
 
-def load_s1_rows():
-    """Prefer results/s1/runs.csv (the freeze input named in the methodology)."""
-    csv_path = ROOT / "s1" / "runs.csv"
-    if csv_path.exists():
-        with csv_path.open(newline="") as fh:
-            rows = [coerce_run_row(row) for row in csv.DictReader(fh)]
-        if rows:
-            return rows
-    return load_runs(ROOT / "s1")
 
 
 def freeze_h3_threshold():
@@ -692,10 +425,38 @@ def load_h3_threshold():
     return json.loads(H3_THRESHOLD_PATH.read_text())
 
 
+def print_ep2_observation(s3_rows):
+    s1_rows = load_s1_rows()
+    if not s1_rows:
+        print("\nEP2 gradient observation from S1: unavailable (no S1 runs)")
+        return
+    s1_index = summary_index(aggregate(s1_rows))
+    print("\nEP2 gradient observation from S1 (separate runs; descriptive only):")
+    print(f"{'VU':>4} {'S1 EP1 L-N':>12} {'S1 EP2 L-N':>12} {'S3 EP1 L-N':>12} {'S3 EP4 L-N':>12}")
+    s3_index = summary_index(aggregate(s3_rows)) if s3_rows else {}
+    for users in (1, 2):
+        gaps = {}
+        for endpoint in ("EP1", "EP2"):
+            pair = paired_summary(s1_index, "isolated", endpoint, users)
+            if pair is None:
+                gaps[endpoint] = "n/d"
+            else:
+                gaps[endpoint] = f"{pair.signed_gap():.2f}"
+        for endpoint in ("EP1", "EP4"):
+            pair = paired_summary(s3_index, "isolated", endpoint, users)
+            if pair is None:
+                gaps[f"s3_{endpoint}"] = "n/d"
+            else:
+                gaps[f"s3_{endpoint}"] = f"{pair.signed_gap():.2f}"
+        print(f"{users:>4} {gaps['EP1']:>12} {gaps['EP2']:>12} "
+              f"{gaps['s3_EP1']:>12} {gaps['s3_EP4']:>12}")
+
+
 def h3_table(summary, rows):
     threshold = load_h3_threshold()
     y = float(threshold["y_ms"])
     print(f"Y = {y:.3f} ms from {H3_THRESHOLD_PATH} (S1 levels {threshold.get('levels_used')})")
+    print_ep2_observation(rows)
 
     pair_sets = {}
     for endpoint in H3_ENDPOINTS:
@@ -712,7 +473,7 @@ def h3_table(summary, rows):
 
     index = summary_index(summary)
     rng = random.Random(BOOTSTRAP_SEED)
-    print("\nH3: D_k = (p95_L(k) − p95_N(k)) − (p95_L(EP1) − p95_N(EP1)), medians of 10 repetitions")
+    print("\nH3: D_k = |p95_L(k) − p95_N(k)| − |p95_L(EP1) − p95_N(EP1)|, medians of 10 repetitions")
     header = (f"{'mode':9} {'endpoint':8} {'VU':>4} {'p95 L':>8} {'p95 N':>8} {'L/N':>6} "
               f"{'D_k':>8} {'CI lo':>8} {'CI hi':>8}  tag")
     print(header)
@@ -720,6 +481,7 @@ def h3_table(summary, rows):
 
     dk_at = {}
     ci_at = {}
+    signed_at = {}
     for (mode, endpoint, users, framework), lar in sorted(index.items()):
         if framework != "laravel" or endpoint not in H3_ENDPOINTS:
             continue
@@ -734,11 +496,17 @@ def h3_table(summary, rows):
             ep1_l["p95_ms_median"], ep1_n["p95_ms_median"],
         )
         dk_at[(mode, endpoint, users)] = point
+        signed_at[(mode, endpoint, users)] = sensitivity_contrast(
+            lar["p95_ms_median"], nest["p95_ms_median"],
+            ep1_l["p95_ms_median"], ep1_n["p95_ms_median"],
+        )
         members = pair_sets[endpoint]
         verdict_vu, consistency_vu = pair_levels(members)
         in_set = users in members
         role = "observation"
-        if verdict_vu is not None and users == verdict_vu:
+        if mode != "isolated":
+            role = "observation"
+        elif verdict_vu is not None and users == verdict_vu:
             role = "verdict"
         elif consistency_vu is not None and users == consistency_vu:
             role = "consistency"
@@ -756,6 +524,9 @@ def h3_table(summary, rows):
 
     modes = sorted({m for m, _, _ in dk_at}) or ["isolated"]
     for mode in modes:
+        if mode != "isolated":
+            print(f"H3 {mode}: all results are observations; mixed mode does not determine the verdict")
+            continue
         per_k = {}
         for endpoint in H3_ENDPOINTS:
             members = pair_sets[endpoint]
@@ -766,26 +537,60 @@ def h3_table(summary, rows):
                 continue
             ci = ci_at.get((mode, endpoint, verdict_vu))
             lo, hi = (None, None) if ci is None else ci
+            verdict_point = signed_at.get((mode, endpoint, verdict_vu))
+            consistency_point = signed_at.get((mode, endpoint, consistency_vu))
+            ep1_verdict = index.get((mode, "EP1", verdict_vu, "laravel"))
+            ep1_verdict_n = index.get((mode, "EP1", verdict_vu, "nestjs"))
+            ep1_consistency = index.get((mode, "EP1", consistency_vu, "laravel"))
+            ep1_consistency_n = index.get((mode, "EP1", consistency_vu, "nestjs"))
+            direction_v = None if verdict_point is None else verdict_point["signed_k"]
+            direction_c = None if consistency_point is None else consistency_point["signed_k"]
+            if ep1_verdict is not None and ep1_verdict_n is not None:
+                direction_v = (
+                    direction_v,
+                    signed_gap(ep1_verdict["p95_ms_median"], ep1_verdict_n["p95_ms_median"]),
+                )
+            if ep1_consistency is not None and ep1_consistency_n is not None:
+                direction_c = (
+                    direction_c,
+                    signed_gap(ep1_consistency["p95_ms_median"], ep1_consistency_n["p95_ms_median"]),
+                )
+            direction_v_ok = None if direction_v is None else (
+                direction_v[0] != 0 and direction_v[1] != 0
+                and (direction_v[0] > 0) == (direction_v[1] > 0)
+            )
+            direction_c_ok = None if direction_c is None else (
+                direction_c[0] != 0 and direction_c[1] != 0
+                and (direction_c[0] > 0) == (direction_c[1] > 0)
+            )
             per_k[endpoint] = classify_d_k(
                 lo, hi, y,
                 dk_at.get((mode, endpoint, verdict_vu)),
                 dk_at.get((mode, endpoint, consistency_vu)),
+                direction_v_ok,
+                direction_c_ok,
             )
             print(f"H3 {endpoint} ({mode}): {per_k[endpoint]} "
                   f"at {verdict_vu} VU (consistency {consistency_vu} VU)")
 
-        evaluable = {k: v for k, v in per_k.items() if v != "not evaluable"}
-        if any(per_k[k] == "not evaluable" for k in H3_REQUIRED):
+        primary = per_k[H3_PRIMARY_ENDPOINT]
+        if primary == "not evaluable":
             verdict = "not evaluable"
-        elif any(v == "rejected" for v in evaluable.values()):
-            verdict = "rejected"
-        elif evaluable and all(v == "supported" for v in evaluable.values()):
-            verdict = "supported"
         else:
-            verdict = "inconclusive"
-        skipped = [k for k in H3_ENDPOINTS if per_k[k] == "not evaluable"]
+            verdict = primary
+        skipped = [k for k in H3_ENDPOINTS if k != H3_PRIMARY_ENDPOINT]
         note = f" ({', '.join(skipped)} reported as observation)" if skipped else ""
         print(f"H3 verdict ({mode}): {verdict}{note}")
+        primary_members = pair_sets[H3_PRIMARY_ENDPOINT]
+        primary_verdict_vu, primary_consistency_vu = pair_levels(primary_members)
+        if primary_verdict_vu is not None and primary_consistency_vu is not None:
+            print("  H3 EP4 sensitivity contrasts (absolute gap relative to EP1; no verdict):")
+            for users in (primary_verdict_vu, primary_consistency_vu):
+                mean_d = metric_contrast(index, mode, H3_PRIMARY_ENDPOINT, users, "mean_ms")
+                little_d = metric_contrast(index, mode, H3_PRIMARY_ENDPOINT, users, "little_ms")
+                mean_s = "n/d" if mean_d is None else f"{mean_d:.2f} ms"
+                little_s = "n/d" if little_d is None else f"{little_d:.2f} ms"
+                print(f"    {users} VU: mean response D={mean_s}; N/X D={little_s}")
 
 
 def print_query_counts(scenario_dir):
@@ -814,7 +619,7 @@ def summarise_scenario(name):
     if name == "s1":
         h1_table(summary, rows)
     elif name == "s2" or name.startswith("s2-pool"):
-        h2_table(summary)
+        h2_table(summary, rows)
     elif name == "s3":
         h3_table(summary, rows)
         print_query_counts(scenario_dir)
