@@ -3,13 +3,12 @@
 
 Usage:
   python3 scripts/summarize.py <scenario>              e.g. ... s1
-  python3 scripts/summarize.py --freeze-h3-threshold   after S1, before S3
 
 Writes results/<scenario>/runs.csv (one row per repetition and endpoint label) and
 results/<scenario>/summary.csv (median and standard deviation across repetitions).
 S1 prints the H1 table (low-load set, bootstrap CI of |Δp95|). S2 prints the H2
-table (bootstrap CI for the p95 slope ratio). S3 prints the H3 table (absolute D_k with signed-direction checks, bootstrap
-CI, threshold Y from results/h3_threshold.json). Secondary Little's-law and CPU
+table (bootstrap CI for the p95 slope ratio). S3 prints the H3 table (signed D_k and bootstrap CI, with a fixed 2 ms
+threshold). Secondary Little's-law and CPU
 per request figures are printed for every scenario and do not decide a verdict.
 
 Definitions (Sections 3.3, 3.5 and 3.6 of the methodology):
@@ -49,11 +48,11 @@ from pathlib import Path
 from summarize_common import (
     BOOTSTRAP_SEED, H1_ENDPOINTS, H1_ERROR_LIMIT_PCT, H1_LIMIT_PCT,
     H2_SATURATION_PCT, H2_SLOPE_MIN_VU, H3_CONSISTENCY_VU, H3_ENDPOINTS,
-    H3_PRIMARY_ENDPOINT, H3_THRESHOLD_PATH, H3_VERDICT_VU, H3_Y_FLOOR_MS,
-    H3_Y_K, JMETER_CPU_FLAG_PCT, LOWLOAD_CPU_SHARE_MAX,
+    H3_PRIMARY_ENDPOINT, H3_THRESHOLD_MS, H3_VERDICT_VU, JMETER_CPU_FLAG_PCT,
+    LOWLOAD_CPU_SHARE_MAX,
     LOWLOAD_SCALING_MIN, PLANNED_VU, ROOT,
     d_k, fmt_number, fmt_ratio, group_values, metric_contrast, paired_summary,
-    sensitivity_contrast, signed_gap, summary_index,
+    signed_gap, summary_index,
 )
 from summarize_data import (
     aggregate, coerce_run_row, load_runs, load_s1_rows, summarise_run, write_csv,
@@ -373,90 +372,9 @@ def git_hash():
 
 
 
-def freeze_h3_threshold():
-    rows = load_s1_rows()
-    if not rows:
-        sys.exit(f"No complete S1 runs under {ROOT / 's1'} (need runs.csv or rep*/meta.json)")
-    summary = aggregate(rows)
-    members, diagnostics = lowload_set(summary, H1_ENDPOINTS)
-    print_lowload(members, diagnostics, "S1")
-    if not members:
-        sys.exit("S1 low-load set is empty; cannot freeze Y")
-
-    per_level = []
-    s_vals = []
-    for vu in members:
-        lar = group_values(rows, "isolated", "EP1", vu, "laravel")
-        nest = group_values(rows, "isolated", "EP1", vu, "nestjs")
-        if len(lar) < 2 or len(nest) < 2:
-            sys.exit(f"EP1 at {vu} VU needs at least two repetitions on both frameworks to compute SD")
-        sd_l = statistics.stdev(lar)
-        sd_n = statistics.stdev(nest)
-        s = math.sqrt(sd_l ** 2 + sd_n ** 2)
-        s_vals.append(s)
-        per_level.append({"users": vu, "sd_l": sd_l, "sd_n": sd_n, "s": s, "n_l": len(lar), "n_n": len(nest)})
-
-    y = max(H3_Y_FLOOR_MS, H3_Y_K * max(s_vals))
-    peak = max(per_level, key=lambda row: row["s"])
-    payload = {
-        "y_ms": y,
-        "floor_ms": H3_Y_FLOOR_MS,
-        "k": H3_Y_K,
-        "levels_used": members,
-        "sd_l": peak["sd_l"],
-        "sd_n": peak["sd_n"],
-        "per_level": per_level,
-        "formula": "Y = max(2 ms, 2 * max_v sqrt(SD_L(v)^2 + SD_N(v)^2)) on S1 isolated EP1 p95",
-        "data_commit": git_hash(),
-        "bootstrap_seed": BOOTSTRAP_SEED,
-    }
-    H3_THRESHOLD_PATH.parent.mkdir(parents=True, exist_ok=True)
-    H3_THRESHOLD_PATH.write_text(json.dumps(payload, indent=2) + "\n")
-    print(f"Y = {y:.3f} ms (floor {H3_Y_FLOOR_MS:g}, k={H3_Y_K:g}, max s={max(s_vals):.3f})")
-    print(f"Wrote {H3_THRESHOLD_PATH}")
-
-
-def load_h3_threshold():
-    if not H3_THRESHOLD_PATH.exists():
-        sys.exit(
-            f"Missing {H3_THRESHOLD_PATH}. Freeze it after S1 with "
-            "python3 scripts/summarize.py --freeze-h3-threshold"
-        )
-    return json.loads(H3_THRESHOLD_PATH.read_text())
-
-
-def print_ep2_observation(s3_rows):
-    s1_rows = load_s1_rows()
-    if not s1_rows:
-        print("\nEP2 gradient observation from S1: unavailable (no S1 runs)")
-        return
-    s1_index = summary_index(aggregate(s1_rows))
-    print("\nEP2 gradient observation from S1 (separate runs; descriptive only):")
-    print(f"{'VU':>4} {'S1 EP1 L-N':>12} {'S1 EP2 L-N':>12} {'S3 EP1 L-N':>12} {'S3 EP4 L-N':>12}")
-    s3_index = summary_index(aggregate(s3_rows)) if s3_rows else {}
-    for users in (1, 2):
-        gaps = {}
-        for endpoint in ("EP1", "EP2"):
-            pair = paired_summary(s1_index, "isolated", endpoint, users)
-            if pair is None:
-                gaps[endpoint] = "n/d"
-            else:
-                gaps[endpoint] = f"{pair.signed_gap():.2f}"
-        for endpoint in ("EP1", "EP4"):
-            pair = paired_summary(s3_index, "isolated", endpoint, users)
-            if pair is None:
-                gaps[f"s3_{endpoint}"] = "n/d"
-            else:
-                gaps[f"s3_{endpoint}"] = f"{pair.signed_gap():.2f}"
-        print(f"{users:>4} {gaps['EP1']:>12} {gaps['EP2']:>12} "
-              f"{gaps['s3_EP1']:>12} {gaps['s3_EP4']:>12}")
-
-
 def h3_table(summary, rows):
-    threshold = load_h3_threshold()
-    y = float(threshold["y_ms"])
-    print(f"Y = {y:.3f} ms from {H3_THRESHOLD_PATH} (S1 levels {threshold.get('levels_used')})")
-    print_ep2_observation(rows)
+    y = H3_THRESHOLD_MS
+    print(f"H3 practical threshold Y = {y:.1f} ms")
 
     pair_sets = {}
     for endpoint in H3_ENDPOINTS:
@@ -473,7 +391,7 @@ def h3_table(summary, rows):
 
     index = summary_index(summary)
     rng = random.Random(BOOTSTRAP_SEED)
-    print("\nH3: D_k = |p95_L(k) − p95_N(k)| − |p95_L(EP1) − p95_N(EP1)|, medians of 10 repetitions")
+    print("\nH3: D_k = (p95_L(k) − p95_N(k)) − (p95_L(EP1) − p95_N(EP1)), medians of repetitions")
     header = (f"{'mode':9} {'endpoint':8} {'VU':>4} {'p95 L':>8} {'p95 N':>8} {'L/N':>6} "
               f"{'D_k':>8} {'CI lo':>8} {'CI hi':>8}  tag")
     print(header)
@@ -481,7 +399,6 @@ def h3_table(summary, rows):
 
     dk_at = {}
     ci_at = {}
-    signed_at = {}
     for (mode, endpoint, users, framework), lar in sorted(index.items()):
         if framework != "laravel" or endpoint not in H3_ENDPOINTS:
             continue
@@ -496,10 +413,6 @@ def h3_table(summary, rows):
             ep1_l["p95_ms_median"], ep1_n["p95_ms_median"],
         )
         dk_at[(mode, endpoint, users)] = point
-        signed_at[(mode, endpoint, users)] = sensitivity_contrast(
-            lar["p95_ms_median"], nest["p95_ms_median"],
-            ep1_l["p95_ms_median"], ep1_n["p95_ms_median"],
-        )
         members = pair_sets[endpoint]
         verdict_vu, consistency_vu = pair_levels(members)
         in_set = users in members
@@ -537,39 +450,20 @@ def h3_table(summary, rows):
                 continue
             ci = ci_at.get((mode, endpoint, verdict_vu))
             lo, hi = (None, None) if ci is None else ci
-            verdict_point = signed_at.get((mode, endpoint, verdict_vu))
-            consistency_point = signed_at.get((mode, endpoint, consistency_vu))
+            verdict_point = dk_at.get((mode, endpoint, verdict_vu))
+            consistency_point = dk_at.get((mode, endpoint, consistency_vu))
             ep1_verdict = index.get((mode, "EP1", verdict_vu, "laravel"))
             ep1_verdict_n = index.get((mode, "EP1", verdict_vu, "nestjs"))
             ep1_consistency = index.get((mode, "EP1", consistency_vu, "laravel"))
             ep1_consistency_n = index.get((mode, "EP1", consistency_vu, "nestjs"))
-            direction_v = None if verdict_point is None else verdict_point["signed_k"]
-            direction_c = None if consistency_point is None else consistency_point["signed_k"]
-            if ep1_verdict is not None and ep1_verdict_n is not None:
-                direction_v = (
-                    direction_v,
-                    signed_gap(ep1_verdict["p95_ms_median"], ep1_verdict_n["p95_ms_median"]),
-                )
-            if ep1_consistency is not None and ep1_consistency_n is not None:
-                direction_c = (
-                    direction_c,
-                    signed_gap(ep1_consistency["p95_ms_median"], ep1_consistency_n["p95_ms_median"]),
-                )
-            direction_v_ok = None if direction_v is None else (
-                direction_v[0] != 0 and direction_v[1] != 0
-                and (direction_v[0] > 0) == (direction_v[1] > 0)
-            )
-            direction_c_ok = None if direction_c is None else (
-                direction_c[0] != 0 and direction_c[1] != 0
-                and (direction_c[0] > 0) == (direction_c[1] > 0)
-            )
-            per_k[endpoint] = classify_d_k(
-                lo, hi, y,
-                dk_at.get((mode, endpoint, verdict_vu)),
-                dk_at.get((mode, endpoint, consistency_vu)),
-                direction_v_ok,
-                direction_c_ok,
-            )
+            point_verdict = dk_at.get((mode, endpoint, verdict_vu))
+            point_consistency = dk_at.get((mode, endpoint, consistency_vu))
+            if lo is None or hi is None or point_verdict is None or point_consistency is None:
+                per_k[endpoint] = "not evaluable"
+            elif lo > y and point_consistency > 0:
+                per_k[endpoint] = "supported"
+            else:
+                per_k[endpoint] = "not supported"
             print(f"H3 {endpoint} ({mode}): {per_k[endpoint]} "
                   f"at {verdict_vu} VU (consistency {consistency_vu} VU)")
 
@@ -584,7 +478,7 @@ def h3_table(summary, rows):
         primary_members = pair_sets[H3_PRIMARY_ENDPOINT]
         primary_verdict_vu, primary_consistency_vu = pair_levels(primary_members)
         if primary_verdict_vu is not None and primary_consistency_vu is not None:
-            print("  H3 EP4 sensitivity contrasts (absolute gap relative to EP1; no verdict):")
+            print("  H3 EP4 secondary contrasts (signed difference relative to EP1; no verdict):")
             for users in (primary_verdict_vu, primary_consistency_vu):
                 mean_d = metric_contrast(index, mode, H3_PRIMARY_ENDPOINT, users, "mean_ms")
                 little_d = metric_contrast(index, mode, H3_PRIMARY_ENDPOINT, users, "little_ms")
@@ -630,9 +524,6 @@ def summarise_scenario(name):
 def main():
     if len(sys.argv) != 2:
         sys.exit(__doc__.split("\n\n")[1])
-    if sys.argv[1] == "--freeze-h3-threshold":
-        freeze_h3_threshold()
-        return
     summarise_scenario(sys.argv[1])
 
 
