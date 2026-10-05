@@ -21,7 +21,7 @@
 #   ENDPOINTS / USERS override the scenario defaults
 #   REPS=10 WARMUP=120 DURATION=180 RAMPUP=10
 #   S1 defaults: ENDPOINTS="EP1 EP2 EP8" USERS="1 2 4 10"
-#   S2 defaults: ENDPOINTS="EP3 EP7 EP9" USERS="10 50 100 200 500 1000"
+#   S2 defaults: ENDPOINTS="EP3 EP7" USERS="200 500 1000"
 #   S3 defaults: ENDPOINTS="EP1 EP4 EP5 EP6" USERS="1 2 4 10"
 #   DB_POOL_SIZE=1   NestJS control run; results go to results/s2-pool1/
 #   INTERLEAVE_SEED  integer used only in `both` mode
@@ -47,7 +47,7 @@ esac
 
 case "$scenario" in
     s1) default_endpoints="EP1 EP2 EP8"; extra_endpoints="PING"; default_users="1 2 4 10" ;;
-    s2) default_endpoints="EP3 EP7 EP9"; extra_endpoints=""; default_users="10 50 100 200 500 1000" ;;
+    s2) default_endpoints="EP3 EP7"; extra_endpoints=""; default_users="200 500 1000" ;;
     s3) default_endpoints="EP1 EP4 EP5 EP6"; extra_endpoints=""; default_users="1 2 4 10" ;;
     *) echo "Unknown scenario: ${scenario} (no jmeter/${scenario}.jmx defaults)" >&2; exit 1 ;;
 esac
@@ -120,22 +120,6 @@ desired_pool="${DB_POOL_SIZE:-10}"
 out_name="${OUT_NAME:-$scenario}"
 if [ -z "${OUT_NAME:-}" ] && [ "$scenario" = s2 ] && [ "$desired_pool" != 10 ]; then
     out_name="s2-pool${desired_pool}"
-fi
-
-# Same rule as scripts/jmeter-data.sh: the day after the last seeded reservation,
-# or today (UTC, postgres container) when that day is already in the past.
-ep9_start=""
-if [ "$scenario" = s2 ]; then
-    running postgres || { echo "postgres is not running" >&2; exit 1; }
-    max_reservation=$(docker compose exec -T postgres sh -c \
-        'psql -U "$POSTGRES_USER" -d laravel_app_template -v ON_ERROR_STOP=1 -X -q -A -t -c "SELECT MAX(reservation_date) FROM reservations"')
-    max_reservation="${max_reservation//[[:space:]]/}"
-    today=$(docker compose exec -T postgres date -u +%F)
-    today="${today//$'\r'/}"
-    ep9_start=$(date -u -d "${max_reservation} + 1 day" +%F)
-    if [[ "$ep9_start" < "$today" ]]; then
-        ep9_start="$today"
-    fi
 fi
 
 jmeter() {
@@ -219,13 +203,6 @@ print(" ".join(xs))
 ' "$INTERLEAVE_SEED" "$rep"
 }
 
-warmup_ep9=()
-measure_ep9=()
-if [ "$scenario" = s2 ]; then
-    warmup_ep9=(-Jep9.start="$ep9_start" -Jep9.offset=0)
-    measure_ep9=(-Jep9.start="$ep9_start" -Jep9.offset=100000000)
-fi
-
 total=$(( ${#endpoints[@]} * ${#users[@]} * REPS * ${#frameworks[@]} ))
 per_run=$(( WARMUP + DURATION + 30 ))
 done_runs=0
@@ -279,7 +256,6 @@ run_one() {
     baseline_counts=$(row_counts "$db" | tr -d '\r\n ')
 
     jmeter -Jendpoint="$ep" -Jusers="$vu" -Jduration="$WARMUP" \
-        "${warmup_ep9[@]}" \
         -l "${container_dir}/warmup.jtl" -j "${container_dir}/warmup.log" >/dev/null
 
     local offset started finished status measure_name mpid jid db counts
@@ -289,7 +265,6 @@ run_one() {
     measure_name="benchmark-jmeter-measure"
     docker rm -f "$measure_name" >/dev/null 2>&1 || true
     jmeter --name "$measure_name" -Jendpoint="$ep" -Jusers="$vu" -Jduration="$DURATION" \
-        "${measure_ep9[@]}" \
         -l "${container_dir}/results.jtl" -j "${container_dir}/jmeter.log" >/dev/null &
     mpid=$!
     jid=""
@@ -321,8 +296,6 @@ run_one() {
     if [ "$ep" = EP7 ]; then
         expected_orders=$((warmup_successes + measurement_successes))
         expected_items="$expected_orders"
-    elif [ "$ep" = EP9 ]; then
-        expected_reservations=$((warmup_successes + measurement_successes))
     fi
 
     json_count() {

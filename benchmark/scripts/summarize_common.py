@@ -21,9 +21,7 @@ LOWLOAD_CPU_SHARE_MAX = 0.80
 JMETER_CPU_FLAG_PCT = 80.0
 BOOTSTRAP_N = 10_000
 BOOTSTRAP_SEED = 20261002
-H3_THRESHOLD_PATH = ROOT / "h3_threshold.json"
-H3_Y_FLOOR_MS = 2.0
-H3_Y_K = 2.0
+H3_THRESHOLD_MS = 2.0
 
 def fmt_ratio(value):
     if value is None or (isinstance(value, float) and math.isnan(value)):
@@ -39,7 +37,7 @@ def signed_gap(lar_p95, nest_p95):
     return lar_p95 - nest_p95
 
 def d_k(lar_k, nest_k, lar_1, nest_1):
-    return abs(signed_gap(lar_k, nest_k)) - abs(signed_gap(lar_1, nest_1))
+    return signed_gap(lar_k, nest_k) - signed_gap(lar_1, nest_1)
 
 def sensitivity_contrast(lar_k, nest_k, lar_1, nest_1):
     signed_k = signed_gap(lar_k, nest_k)
@@ -47,7 +45,7 @@ def sensitivity_contrast(lar_k, nest_k, lar_1, nest_1):
     return {
         "signed_k": signed_k,
         "signed_1": signed_1,
-        "absolute_d": abs(signed_k) - abs(signed_1),
+        "signed_d": signed_k - signed_1,
     }
 
 class FrameworkPair:
@@ -83,7 +81,7 @@ def metric_contrast(index, mode, endpoint, users, metric):
     baseline_values = baseline_pair.metric(metric)
     if endpoint_values is None or baseline_values is None:
         return None
-    return abs(endpoint_values[0] - endpoint_values[1]) - abs(baseline_values[0] - baseline_values[1])
+    return (endpoint_values[0] - endpoint_values[1]) - (baseline_values[0] - baseline_values[1])
 
 
 def summary_index(summary):
