@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  S3 - complex query (H3): EP1 (baseline), EP4, EP5, EP6. All four are reads and succeed with HTTP 200.
+  S3 - relational complexity (H3): EP1 (baseline), EP2 (primary), EP4, EP5, EP6. All five are reads and succeed with HTTP 200.
   The X-Debug-Queries header is intentionally absent: the query counter must stay
   inert during the load run (scripts/query-count.sh records it out of band).
 
   Properties (passed with -J by scripts/run-scenario.sh; the defaults let the plan
   run unchanged in the JMeter GUI against the Laravel stack on localhost:8080):
     host, port        target nginx (in the runner: laravel-nginx / nestjs-nginx, port 80)
-    endpoint          EP1 | EP4 | EP5 | EP6 run one endpoint in isolation, MIXED picks one at random per iteration
+    endpoint          EP1 | EP2 | EP4 | EP5 | EP6 run one endpoint in isolation
     users, rampup, duration   closed workload: users threads, no think time, duration in seconds
     orders.max, dishes.max    id ranges from jmeter/data/ranges.properties (-q); both are contiguous
 -->
@@ -176,6 +176,17 @@
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP2">
+            <stringProp name="HTTPSampler.path">/api/menu-items?page=${__Random(1,${__P(ep2.pages,23)})}</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
           <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP4">
             <stringProp name="HTTPSampler.path">/api/orders/${__Random(1,${__P(orders.max,100000)})}</stringProp>
             <stringProp name="HTTPSampler.method">GET</stringProp>
@@ -210,55 +221,6 @@
           </HTTPSamplerProxy>
           <hashTree/>
 
-          <RandomController guiclass="RandomControlGui" testclass="RandomController" testname="MIXED">
-            <intProp name="InterleaveControl.style">1</intProp>
-          </RandomController>
-          <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP1">
-              <stringProp name="HTTPSampler.path">/api/tables?page=${__Random(1,${__P(ep1.pages,10)})}</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-                <collectionProp name="Arguments.arguments"/>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree/>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP4">
-              <stringProp name="HTTPSampler.path">/api/orders/${__Random(1,${__P(orders.max,100000)})}</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-                <collectionProp name="Arguments.arguments"/>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree/>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP5">
-              <stringProp name="HTTPSampler.path">/api/dishes/${__Random(1,${__P(dishes.max,500)})}/ingredients</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-                <collectionProp name="Arguments.arguments"/>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree/>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP6">
-              <stringProp name="HTTPSampler.path">/api/dashboard/summary</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-                <collectionProp name="Arguments.arguments"/>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree/>
-          </hashTree>
         </hashTree>
       </hashTree>
     </hashTree>

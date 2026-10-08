@@ -5,7 +5,7 @@
   Properties (passed with -J by scripts/run-scenario.sh; the defaults let the plan
   run unchanged in the JMeter GUI against the Laravel stack on localhost:8080):
     host, port        target nginx (in the runner: laravel-nginx / nestjs-nginx, port 80)
-    endpoint          EP3 | EP7 | EP9 run one endpoint in isolation, MIXED picks one at random per iteration
+    endpoint          EP3 | EP7 | EP9 run one endpoint in isolation
     users, rampup, duration   closed workload: users threads, no think time, duration in seconds
     ep3.pages, tables.max, ep9.start   ranges from jmeter/data/ranges.properties (-q)
     ep9.offset        added to the slot counter; the runner uses 0 for warm-up and a
@@ -290,133 +290,6 @@ vars.put("ep9_time", String.format("%02d:%02d", Integer.valueOf(minuteOfDay.intd
             <hashTree/>
           </hashTree>
 
-          <RandomController guiclass="RandomControlGui" testclass="RandomController" testname="MIXED">
-            <intProp name="InterleaveControl.style">1</intProp>
-          </RandomController>
-          <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP3">
-              <stringProp name="HTTPSampler.path">/api/orders?page=${__Random(1,${__P(ep3.pages,5000)})}</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-                <collectionProp name="Arguments.arguments"/>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="HTTP 200">
-                <collectionProp name="Asserion.test_strings">
-                  <stringProp name="49586">200</stringProp>
-                </collectionProp>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">8</intProp>
-              </ResponseAssertion>
-              <hashTree/>
-            </hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP7">
-              <stringProp name="HTTPSampler.path">/api/orders</stringProp>
-              <stringProp name="HTTPSampler.method">POST</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-                <collectionProp name="Arguments.arguments">
-                  <elementProp name="" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                    <stringProp name="Argument.value">{"table_id":${__Random(1,${__P(tables.max,200)})},"items":[{"menu_item_id":${menu_item_id},"quantity":1}]}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                  </elementProp>
-                </collectionProp>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="HTTP 201">
-                <collectionProp name="Asserion.test_strings">
-                  <stringProp name="49587">201</stringProp>
-                </collectionProp>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">8</intProp>
-              </ResponseAssertion>
-              <hashTree/>
-            </hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP9">
-              <stringProp name="HTTPSampler.path">/api/reservations</stringProp>
-              <stringProp name="HTTPSampler.method">POST</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-                <collectionProp name="Arguments.arguments">
-                  <elementProp name="" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                    <stringProp name="Argument.value">{"table_id":${ep9_table},"customer_name":"Bench Guest","phone_number":"+48000000001","reservation_date":"${ep9_date}","reservation_time":"${ep9_time}","party_size":2,"duration_minutes":30}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                  </elementProp>
-                </collectionProp>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree>
-              <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="unique reservation slot">
-                <stringProp name="scriptLanguage">groovy</stringProp>
-                <stringProp name="parameters"></stringProp>
-                <stringProp name="filename"></stringProp>
-                <stringProp name="cacheKey">true</stringProp>
-                <stringProp name="script">def seq = props.get("ep9.seq")
-if (seq == null) {
-    synchronized (props) {
-        seq = props.get("ep9.seq")
-        if (seq == null) {
-            seq = new java.util.concurrent.atomic.AtomicLong(0L)
-            props.put("ep9.seq", seq)
-        }
-    }
-}
-long offset = 0L
-def offsetProp = props.get("ep9.offset")
-if (offsetProp != null) {
-    offset = Long.parseLong(offsetProp.toString())
-}
-long n = seq.incrementAndGet() + offset
-int tables = 200
-def tablesProp = props.get("tables.max")
-if (tablesProp != null) {
-    tables = Integer.parseInt(tablesProp.toString())
-}
-int slotsPerDay = 48
-long index = n - 1L
-long perDay = tables * (long) slotsPerDay
-int tableId = (int) (index % tables) + 1
-int slot = index.intdiv(tables).intValue() % slotsPerDay
-int day = index.intdiv(perDay).intValue()
-int minuteOfDay = slot * 30
-String start = "2026-10-21"
-def startProp = props.get("ep9.start")
-if (startProp != null) {
-    start = startProp.toString()
-}
-def date = java.time.LocalDate.parse(start).plusDays(day)
-vars.put("ep9_table", Integer.toString(tableId))
-vars.put("ep9_date", date.toString())
-vars.put("ep9_time", String.format("%02d:%02d", Integer.valueOf(minuteOfDay.intdiv(60)), Integer.valueOf(minuteOfDay % 60)))</stringProp>
-              </JSR223PreProcessor>
-              <hashTree/>
-              <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="HTTP 201">
-                <collectionProp name="Asserion.test_strings">
-                  <stringProp name="49587">201</stringProp>
-                </collectionProp>
-                <stringProp name="Assertion.custom_message"></stringProp>
-                <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
-                <boolProp name="Assertion.assume_success">false</boolProp>
-                <intProp name="Assertion.test_type">8</intProp>
-              </ResponseAssertion>
-              <hashTree/>
-            </hashTree>
-          </hashTree>
         </hashTree>
       </hashTree>
     </hashTree>

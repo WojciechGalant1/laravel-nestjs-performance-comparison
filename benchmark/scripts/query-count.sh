@@ -31,8 +31,7 @@ mkdir -p results/s3
 out="results/s3/query-count-${framework}.txt"
 : >"$out"
 
-# Fixed seeded ids. jmeter-data.sh rejects these tables when the ids have gaps.
-for spec in "EP4 /api/orders/1" "EP5 /api/dishes/1/ingredients" "EP6 /api/dashboard/summary"; do
+for spec in "EP1 /api/tables?page=1" "EP2 /api/menu-items?page=1" "EP4 /api/orders/1" "EP5 /api/dishes/1/ingredients" "EP6 /api/dashboard/summary"; do
     label=${spec%% *}
     path=${spec#* }
     headers=$(docker compose exec -T "$nginx" curl -sS -D - -o /dev/null \

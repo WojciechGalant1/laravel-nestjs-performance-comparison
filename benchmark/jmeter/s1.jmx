@@ -5,8 +5,8 @@
   Properties (passed with -J by scripts/run-scenario.sh; the defaults let the plan
   run unchanged in the JMeter GUI against the Laravel stack on localhost:8080):
     host, port        target nginx (in the runner: laravel-nginx / nestjs-nginx, port 80)
-    endpoint          EP1 | EP2 | EP8 run one endpoint in isolation, MIXED picks one at random per iteration
-                      PING is a diagnostic (GET /api/ping, no database) and is not part of MIXED or of H1
+    endpoint          EP1 | EP8 run one endpoint in isolation
+                      PING is a diagnostic (GET /api/ping, no database) and is not part of H1
     users, rampup, duration   closed workload: users threads, no think time, duration in seconds
     ep1.pages, ep2.pages, orders.max   ranges from jmeter/data/ranges.properties (-q)
 -->
@@ -231,50 +231,6 @@
           </HTTPSamplerProxy>
           <hashTree/>
 
-          <RandomController guiclass="RandomControlGui" testclass="RandomController" testname="MIXED">
-            <intProp name="InterleaveControl.style">1</intProp>
-          </RandomController>
-          <hashTree>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP1">
-              <stringProp name="HTTPSampler.path">/api/tables?page=${__Random(1,${__P(ep1.pages,10)})}</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-                <collectionProp name="Arguments.arguments"/>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree/>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP2">
-              <stringProp name="HTTPSampler.path">/api/menu-items?page=${__Random(1,${__P(ep2.pages,23)})}</stringProp>
-              <stringProp name="HTTPSampler.method">GET</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-                <collectionProp name="Arguments.arguments"/>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree/>
-            <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP8">
-              <stringProp name="HTTPSampler.path">/api/orders/${__Random(1,${__P(orders.max,100000)})}/status</stringProp>
-              <stringProp name="HTTPSampler.method">PATCH</stringProp>
-              <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
-              <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-              <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
-              <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
-                <collectionProp name="Arguments.arguments">
-                  <elementProp name="" elementType="HTTPArgument">
-                    <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                    <stringProp name="Argument.value">{"status":"${__V(status_${__Random(1,3)})}"}</stringProp>
-                    <stringProp name="Argument.metadata">=</stringProp>
-                  </elementProp>
-                </collectionProp>
-              </elementProp>
-            </HTTPSamplerProxy>
-            <hashTree/>
-          </hashTree>
         </hashTree>
       </hashTree>
     </hashTree>

@@ -8,9 +8,9 @@ ROOT = Path(__file__).resolve().parent.parent / "results"
 SETUP_LABELS = {"SETUP_login"}
 H1_LIMIT_PCT = 15.0
 H1_ERROR_LIMIT_PCT = 1.0
-H1_ENDPOINTS = ("EP1", "EP2", "EP8")
-H3_ENDPOINTS = ("EP4", "EP5", "EP6")
-H3_PRIMARY_ENDPOINT = "EP4"
+H1_ENDPOINTS = ("EP1", "EP8")
+H3_ENDPOINTS = ("EP2", "EP4", "EP6")
+H3_PRIMARY_ENDPOINT = "EP2"
 H3_VERDICT_VU = 2
 H3_CONSISTENCY_VU = 1
 H2_SATURATION_PCT = 5.0
@@ -22,6 +22,19 @@ JMETER_CPU_FLAG_PCT = 80.0
 BOOTSTRAP_N = 10_000
 BOOTSTRAP_SEED = 20261002
 H3_THRESHOLD_MS = 2.0
+
+UNITS = {
+    "B": 1 / (1024 * 1024),
+    "kB": 1000 / (1024 * 1024),
+    "KB": 1000 / (1024 * 1024),
+    "KiB": 1 / 1024,
+    "MB": 1000 * 1000 / (1024 * 1024),
+    "MiB": 1.0,
+    "GB": 1000 * 1000 * 1000 / (1024 * 1024),
+    "GiB": 1024.0,
+    "TB": 1000 * 1000 * 1000 * 1000 / (1024 * 1024),
+    "TiB": 1024.0 * 1024.0,
+}
 
 def fmt_ratio(value):
     if value is None or (isinstance(value, float) and math.isnan(value)):
