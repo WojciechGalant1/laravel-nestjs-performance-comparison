@@ -9,7 +9,6 @@ COPY . .
 RUN npm run build
 
 
-# Production image used by the benchmark (default target).
 FROM node:24-bookworm-slim AS runtime
 
 ENV NODE_ENV=production

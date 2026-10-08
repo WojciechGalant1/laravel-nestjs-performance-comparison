@@ -137,21 +137,6 @@ def pair_levels(members):
     return None, None
 
 
-def classify_d_k(lo, hi, y, point_v, point_c, direction_v, direction_c):
-    if (lo is None or hi is None or point_v is None or point_c is None
-            or direction_v is None or direction_c is None):
-        return "not evaluable"
-    direction_ok = direction_v and direction_c
-    if point_v <= 0 or point_c <= 0:
-        direction_ok = False
-    if lo > y and direction_ok:
-        return "supported"
-    if lo >= 0 and hi <= y:
-        return "not supported (effect below Y)"
-    if hi < 0:
-        return "rejected"
-    return "inconclusive"
-
 
 def flag_jmeter_cpu(summary):
     flagged = [
@@ -376,8 +361,11 @@ def h3_table(summary, rows):
     y = H3_THRESHOLD_MS
     print(f"H3 practical threshold Y = {y:.1f} ms")
 
+    present_endpoints = [ep for ep in ["EP2", "EP4", "EP5", "EP6"] if any(r.get("endpoint") == ep for r in summary)]
+    eval_endpoints = [ep for ep in H3_ENDPOINTS if ep in present_endpoints] or present_endpoints
+
     pair_sets = {}
-    for endpoint in H3_ENDPOINTS:
+    for endpoint in eval_endpoints:
         members, diagnostics = lowload_set(summary, ("EP1", endpoint))
         pair_sets[endpoint] = members
         print_lowload(members, diagnostics, f"S3 pair (EP1, {endpoint})")
@@ -400,7 +388,7 @@ def h3_table(summary, rows):
     dk_at = {}
     ci_at = {}
     for (mode, endpoint, users, framework), lar in sorted(index.items()):
-        if framework != "laravel" or endpoint not in H3_ENDPOINTS:
+        if framework != "laravel" or endpoint not in eval_endpoints:
             continue
         nest = index.get((mode, endpoint, users, "nestjs"))
         ep1_l = index.get((mode, "EP1", users, "laravel"))
@@ -441,7 +429,7 @@ def h3_table(summary, rows):
             print(f"H3 {mode}: all results are observations; mixed mode does not determine the verdict")
             continue
         per_k = {}
-        for endpoint in H3_ENDPOINTS:
+        for endpoint in eval_endpoints:
             members = pair_sets[endpoint]
             verdict_vu, consistency_vu = pair_levels(members)
             if verdict_vu is None:
@@ -450,12 +438,6 @@ def h3_table(summary, rows):
                 continue
             ci = ci_at.get((mode, endpoint, verdict_vu))
             lo, hi = (None, None) if ci is None else ci
-            verdict_point = dk_at.get((mode, endpoint, verdict_vu))
-            consistency_point = dk_at.get((mode, endpoint, consistency_vu))
-            ep1_verdict = index.get((mode, "EP1", verdict_vu, "laravel"))
-            ep1_verdict_n = index.get((mode, "EP1", verdict_vu, "nestjs"))
-            ep1_consistency = index.get((mode, "EP1", consistency_vu, "laravel"))
-            ep1_consistency_n = index.get((mode, "EP1", consistency_vu, "nestjs"))
             point_verdict = dk_at.get((mode, endpoint, verdict_vu))
             point_consistency = dk_at.get((mode, endpoint, consistency_vu))
             if lo is None or hi is None or point_verdict is None or point_consistency is None:
@@ -467,21 +449,21 @@ def h3_table(summary, rows):
             print(f"H3 {endpoint} ({mode}): {per_k[endpoint]} "
                   f"at {verdict_vu} VU (consistency {consistency_vu} VU)")
 
-        primary = per_k[H3_PRIMARY_ENDPOINT]
-        if primary == "not evaluable":
+        primary_ep = H3_PRIMARY_ENDPOINT if H3_PRIMARY_ENDPOINT in eval_endpoints else (eval_endpoints[0] if eval_endpoints else None)
+        if primary_ep is None or primary_ep not in per_k or per_k[primary_ep] == "not evaluable":
             verdict = "not evaluable"
         else:
-            verdict = primary
-        skipped = [k for k in H3_ENDPOINTS if k != H3_PRIMARY_ENDPOINT]
+            verdict = per_k[primary_ep]
+        skipped = [k for k in eval_endpoints if k != primary_ep]
         note = f" ({', '.join(skipped)} reported as observation)" if skipped else ""
         print(f"H3 verdict ({mode}): {verdict}{note}")
-        primary_members = pair_sets[H3_PRIMARY_ENDPOINT]
+        primary_members = pair_sets.get(primary_ep, [])
         primary_verdict_vu, primary_consistency_vu = pair_levels(primary_members)
         if primary_verdict_vu is not None and primary_consistency_vu is not None:
-            print("  H3 EP4 secondary contrasts (signed difference relative to EP1; no verdict):")
+            print(f"  H3 {primary_ep} secondary contrasts (signed difference relative to EP1; no verdict):")
             for users in (primary_verdict_vu, primary_consistency_vu):
-                mean_d = metric_contrast(index, mode, H3_PRIMARY_ENDPOINT, users, "mean_ms")
-                little_d = metric_contrast(index, mode, H3_PRIMARY_ENDPOINT, users, "little_ms")
+                mean_d = metric_contrast(index, mode, primary_ep, users, "mean_ms")
+                little_d = metric_contrast(index, mode, primary_ep, users, "little_ms")
                 mean_s = "n/d" if mean_d is None else f"{mean_d:.2f} ms"
                 little_s = "n/d" if little_d is None else f"{little_d:.2f} ms"
                 print(f"    {users} VU: mean response D={mean_s}; N/X D={little_s}")
@@ -510,11 +492,12 @@ def summarise_scenario(name):
     print(f"{len(rows)} run rows -> {scenario_dir / 'runs.csv'}")
     print(f"{len(summary)} groups -> {scenario_dir / 'summary.csv'}")
 
-    if name == "s1":
+    base_name = Path(name).name.lower()
+    if base_name == "s1" or base_name.startswith("s1-") or "s1" in base_name:
         h1_table(summary, rows)
-    elif name == "s2" or name.startswith("s2-pool"):
+    elif base_name == "s2" or base_name.startswith("s2-") or "s2" in base_name:
         h2_table(summary, rows)
-    elif name == "s3":
+    elif base_name == "s3" or base_name.startswith("s3-") or "s3" in base_name:
         h3_table(summary, rows)
         print_query_counts(scenario_dir)
     flag_jmeter_cpu(summary)

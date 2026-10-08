@@ -17,12 +17,11 @@
 # thermal or host drift. Only one application stack runs at a time.
 #
 # Environment (defaults follow the methodology):
-#   MODE=isolated|mixed
 #   ENDPOINTS / USERS override the scenario defaults
 #   REPS=10 WARMUP=120 DURATION=180 RAMPUP=10
-#   S1 defaults: ENDPOINTS="EP1 EP2 EP8" USERS="1 2 4 10"
+#   S1 defaults: ENDPOINTS="EP1 EP8" USERS="1 2 4 10"
 #   S2 defaults: ENDPOINTS="EP3 EP7" USERS="200 500 1000"
-#   S3 defaults: ENDPOINTS="EP1 EP4 EP5 EP6" USERS="1 2 4 10"
+#   S3 defaults: ENDPOINTS="EP1 EP2 EP4 EP6" USERS="1 2 4 10"
 #   DB_POOL_SIZE=1   NestJS control run; results go to results/s2-pool1/
 #   INTERLEAVE_SEED  integer used only in `both` mode
 #
@@ -46,31 +45,25 @@ case "$target" in
 esac
 
 case "$scenario" in
-    s1) default_endpoints="EP1 EP2 EP8"; extra_endpoints="PING"; default_users="1 2 4 10" ;;
-    s2) default_endpoints="EP3 EP7"; extra_endpoints=""; default_users="200 500 1000" ;;
-    s3) default_endpoints="EP1 EP4 EP5 EP6"; extra_endpoints=""; default_users="1 2 4 10" ;;
+    s1) default_endpoints="EP1 EP8"; extra_endpoints="EP2 PING"; default_users="1 2 4 10"; default_warmup=60; default_duration=60 ;;
+    s2) default_endpoints="EP3 EP7"; extra_endpoints=""; default_users="200 500 1000"; default_warmup=120; default_duration=120 ;;
+    s3) default_endpoints="EP1 EP2 EP4 EP6"; extra_endpoints="EP5"; default_users="1 2 4 10"; default_warmup=60; default_duration=60 ;;
     *) echo "Unknown scenario: ${scenario} (no jmeter/${scenario}.jmx defaults)" >&2; exit 1 ;;
 esac
 
-MODE="${MODE:-isolated}"
+MODE="isolated"
 ENDPOINTS="${ENDPOINTS:-$default_endpoints}"
 USERS="${USERS:-$default_users}"
 REPS="${REPS:-10}"
-WARMUP="${WARMUP:-120}"
-DURATION="${DURATION:-180}"
+WARMUP="${WARMUP:-$default_warmup}"
+DURATION="${DURATION:-$default_duration}"
 RAMPUP="${RAMPUP:-10}"
 INTERLEAVE_SEED="${INTERLEAVE_SEED:-20261002}"
 
-case "$MODE" in
-    isolated)
-        for ep in $ENDPOINTS; do
-            [[ " $default_endpoints $extra_endpoints " == *" $ep "* ]] || { echo "Endpoint ${ep} is not part of ${scenario}" >&2; exit 1; }
-        done
-        read -r -a endpoints <<<"$ENDPOINTS"
-        ;;
-    mixed) endpoints=(MIXED) ;;
-    *) echo "MODE must be isolated or mixed" >&2; exit 1 ;;
-esac
+for ep in $ENDPOINTS; do
+    [[ " $default_endpoints $extra_endpoints " == *" $ep "* ]] || { echo "Endpoint ${ep} is not part of ${scenario}" >&2; exit 1; }
+done
+read -r -a endpoints <<<"$ENDPOINTS"
 read -r -a users <<<"$USERS"
 
 [ -f "jmeter/${scenario}.jmx" ] || { echo "Missing jmeter/${scenario}.jmx" >&2; exit 1; }
@@ -251,14 +244,14 @@ run_one() {
     echo "[${done_runs}/${total}] ${framework} ${out_name} ${ep} vu=${vu} rep=${rep} (about ${eta} min left)"
 
     scripts/db-reset.sh "$framework" >/dev/null
-    db="${framework}_app"
+    local db="${framework}_app"
     local baseline_counts warmup_successes measurement_successes expected_orders expected_items expected_reservations
     baseline_counts=$(row_counts "$db" | tr -d '\r\n ')
 
     jmeter -Jendpoint="$ep" -Jusers="$vu" -Jduration="$WARMUP" \
         -l "${container_dir}/warmup.jtl" -j "${container_dir}/warmup.log" >/dev/null
 
-    local offset started finished status measure_name mpid jid db counts
+    local offset started finished status measure_name mpid jid counts
     offset=$(clock_offset)
     started="$EPOCHREALTIME"
     status=complete

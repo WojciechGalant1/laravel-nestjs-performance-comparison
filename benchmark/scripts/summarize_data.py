@@ -7,7 +7,7 @@ import statistics
 from collections import defaultdict
 from pathlib import Path
 
-from summarize_common import ROOT, SETUP_LABELS
+from summarize_common import ROOT, SETUP_LABELS, UNITS
 from summarize_stats import percentile
 
 def to_mib(value):
