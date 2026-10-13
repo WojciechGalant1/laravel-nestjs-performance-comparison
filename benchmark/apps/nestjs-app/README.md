@@ -216,3 +216,13 @@ curl -i -H "Authorization: Bearer <TOKEN>" \
      http://localhost:8081/api/tables
 ```
 *(W nagłówkach odpowiedzi pojawi się `X-Query-Count: 1`).*
+
+---
+
+## 6. Specyfikacja OpenAPI (Swagger)
+
+Pełna, sformalizowana specyfikacja interfejsu API w standardzie **OpenAPI 3.0.3** dla aplikacji NestJS znajduje się w pliku:
+- [`openapi.yaml`](./openapi.yaml)
+
+Zawiera ona szczegółowe schematy żądań (DTO), odpowiedzi (z uwzględnieniem `snake_case` i stronicowania), typów wyliczeniowych (Enum), nagłówków diagnostycznych oraz kodów błędów. Może być bezpośrednio zaimportowana do narzędzi takich jak Swagger UI, Postman, Insomnia czy Redoc.
+

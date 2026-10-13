@@ -210,3 +210,13 @@ curl -i -H "Authorization: Bearer <TOKEN>" \
      http://localhost:8080/api/tables
 ```
 *(Nagłówek `X-Query-Count: 1` pojawi się w odpowiedzi HTTP).*
+
+---
+
+## 6. Specyfikacja OpenAPI (Swagger)
+
+Pełna, sformalizowana specyfikacja interfejsu API w standardzie **OpenAPI 3.0.3** znajduje się w pliku:
+- [`openapi.yaml`](./openapi.yaml)
+
+Zawiera ona szczegółowe schematy żądań, odpowiedzi, typów wyliczeniowych (Enum), nagłówków diagnostycznych oraz struktury kopert paginacji. Może być bezpośrednio importowana do narzędzi takich jak Swagger UI, Postman, Insomnia czy Redoc.
+

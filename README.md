@@ -6,6 +6,7 @@ Kompleksowe środowisko eksperymentalne do empirycznego porównania wydajności 
 
 ## Spis Treści
 
+- [Dokumentacja Projektu (Indeks Dokumentów)](#dokumentacja-projektu-indeks-dokumentów)
 1. [Wymagania sprzętowe i Szybki Start (Quick Start)](#1-wymagania-sprz%C4%99towe-i-szybki-start-quick-start)
 2. [Architektura i Symetria Środowiska](#2-architektura-i-symetria-%C5%9Brodowiska)
 3. [Struktura Repozytorium](#3-struktura-repozytorium)
@@ -16,6 +17,18 @@ Kompleksowe środowisko eksperymentalne do empirycznego porównania wydajności 
 8. [Narzędzia Diagnostyczne](#8-narz%C4%99dzia-diagnostyczne)
 
 ---
+
+## Dokumentacja Projektu (Indeks Dokumentów)
+
+Kompletna dokumentacja badania została podzielona na dedykowane moduły techniczne:
+
+| Dokument | Ścieżka pliku | Zakres i zawartość |
+| :--- | :--- | :--- |
+| **Słownik Danych i Wyniki** | [`DATA_DICTIONARY.md`](file:///home/user/projekty/badanie/DATA_DICTIONARY.md) | Struktura katalogu `results/`, legenda nazewnictwa oraz pełna specyfikacja kolumn plików CSV i JSON (`results.jtl`, `stats.csv`, `meta.json`, `runs.csv`, `summary.csv`). |
+| **Baza Danych** | [`DATABASE.md`](file:///home/user/projekty/badanie/DATABASE.md) | Schemat relacyjny PostgreSQL 16 (diagram ERD Mermaid), słowniki i tabele transakcyjne, deterministyczny seeder (`mt_srand(20260101)`) oraz mechanizmy migawek `*_template`. |
+| **Skrypty i Pipeline** | [`SCRIPTS.md`](file:///home/user/projekty/badanie/SCRIPTS.md) | Dokumentacja orkiestracji eksperymentów (`run-main.sh`, `run-scenario.sh`), zarządzania stanem bazy (`db-setup.sh`, `db-reset.sh`), pakietu analizy statystycznej Bootstrap 10k (`summarize.py`) i testów dymnych. |
+| **Aplikacja Laravel** | [`benchmark/apps/laravel-app/README.md`](file:///home/user/projekty/badanie/benchmark/apps/laravel-app/README.md) | Architektura stosu PHP 8.4 + OPcache/JIT, procesy PHP-FPM, uwierzytelnianie `ClaimJwtGuard`, specyfikacja endpointów EP1–EP10 oraz specyfikacja [OpenAPI 3.0](file:///home/user/projekty/badanie/benchmark/apps/laravel-app/openapi.yaml). |
+| **Aplikacja NestJS** | [`benchmark/apps/nestjs-app/README.md`](file:///home/user/projekty/badanie/benchmark/apps/nestjs-app/README.md) | Architektura stosu Node.js 24 + PM2 Cluster Mode, konfiguracja TypeORM (`relationLoadStrategy: 'query'`), specyfikacja endpointów EP1–EP10 oraz specyfikacja [OpenAPI 3.0](file:///home/user/projekty/badanie/benchmark/apps/nestjs-app/openapi.yaml). |
 
 ## 1. Wymagania sprzętowe i Szybki Start (Quick Start)
 
@@ -113,6 +126,13 @@ benchmark/
 └── results/                 # Wyniki pomiarów (struktura: <scenario>/<fw>/<ep>/vu<N>/rep<NN>/)
 ```
 
+Szczegółowa dokumentacja poszczególnych podsystemów:
+- [Aplikacja Laravel (`apps/laravel-app/README.md`)](file:///home/user/projekty/badanie/benchmark/apps/laravel-app/README.md) – architektura, OPcache/JIT, endpointy i specyfikacja [OpenAPI 3.0](file:///home/user/projekty/badanie/benchmark/apps/laravel-app/openapi.yaml).
+- [Aplikacja NestJS (`apps/nestjs-app/README.md`)](file:///home/user/projekty/badanie/benchmark/apps/nestjs-app/README.md) – architektura, PM2 cluster mode, TypeORM, endpointy i specyfikacja [OpenAPI 3.0](file:///home/user/projekty/badanie/benchmark/apps/nestjs-app/openapi.yaml).
+- [Skrypty wykonawcze i analityczne (`SCRIPTS.md`)](file:///home/user/projekty/badanie/SCRIPTS.md) – orkiestracja, parametry środowiskowe, procedury Bootstrap 10k i testy dymne.
+- [Schemat i determinizm bazy danych (`DATABASE.md`)](file:///home/user/projekty/badanie/DATABASE.md) – diagram ERD Mermaid, schemat tabel PostgreSQL 16, seeder i mechanizmy szablonów `*_template`.
+- [Słownik danych i formaty wyników (`DATA_DICTIONARY.md`)](file:///home/user/projekty/badanie/DATA_DICTIONARY.md) – struktura `results/`, legenda nazewnictwa oraz pełna specyfikacja kolumn plików CSV i JSON.
+
 ---
 
 ## 4. Konfiguracja Środowiska i Runtimów
@@ -143,6 +163,8 @@ Parametry sterujące konfiguracją infrastruktury:
 
 ## 5. Determinizm Danych i Zarządzanie Bazą
 
+> Szczegółowy opis schematu relacyjnego, relacji 1:N / N:M, diagramu ERD oraz procedur seedera znajduje się w dedykowanym dokumencie [`DATABASE.md`](file:///home/user/projekty/badanie/DATABASE.md).
+
 ### Generator danych (`RestaurantSeeder.php`)
 - **Ziarno generatora liczb pseudolosowych:** Ustalony seed `mt_srand(20260101)` i `fake()->seed(20260101)`.
 - **Rozmiary tabel:**
@@ -164,6 +186,8 @@ Parametry sterujące konfiguracją infrastruktury:
 ---
 
 ## 6. Pipeline Wykonawczy i Orkiestracja Testów
+
+> Szczegółowy opis działania skryptów orkiestracyjnych, parametrów wykonawczych i flag środowiskowych znajduje się w [`SCRIPTS.md`](file:///home/user/projekty/badanie/SCRIPTS.md).
 
 ### Plany Apache JMeter (`.jmx`)
 - **Tryb obciążenia:** Pętla zamknięta (**closed workload**) bez opóźnień użytkownika (*zero think time*) z połączeniami HTTP persistent keep-alive.
@@ -188,6 +212,8 @@ Dla każdego endpointu, poziomu współbieżności i powtórzenia:
 ---
 
 ## 7. Przetwarzanie Wyników i Analiza Statystyczna
+
+> Pełna specyfikacja kolumn plików wynikowych, schematy obiektów `meta.json` oraz legenda struktury katalogów znajdują się w [`DATA_DICTIONARY.md`](file:///home/user/projekty/badanie/DATA_DICTIONARY.md).
 
 Analiza danych pomiarowych jest wykonywana przez pakiet `scripts/summarize.py`:
 

@@ -1,0 +1,952 @@
+openapi: 3.0.3
+info:
+  title: Restaurant Management System REST API (Laravel 13 Benchmark)
+  description: |
+    Specyfikacja OpenAPI 3.0 dla aplikacji backendowej **Laravel 13 (PHP 8.4)** 
+    stanowiącej obiekt badawczy w empirycznym porównaniu wydajności z frameworkiem NestJS.
+    
+    Aplikacja implementuje architekturę warstwową MVC z bezstanowym uwierzytelnianiem JWT 
+    weryfikowanym w pamięci podręcznej (in-memory) oraz Active Record (Eloquent ORM) na bazie PostgreSQL 16.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Środowisko kontenerowe przez Nginx Reverse Proxy (Port 8080)
+  - url: http://127.0.0.1:8080
+    description: Lokalny adres pętli zwrotnej
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/auth/login:
+    post:
+      summary: EP10 - Logowanie użytkownika i wydanie tokenu JWT
+      description: |
+        Uwierzytelnia użytkownika na podstawie adresu e-mail i hasła w tabeli `users`.
+        Wydaje bezstanowy 164-znakowy token JWT (HS256) zawierający identyfikator użytkownika (`sub`)
+        oraz przypisaną rolę (`role`), współdzielony pomiędzy wątkami testowymi JMeter.
+      security: []
+      tags:
+        - Uwierzytelnianie (Auth)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: manager@example.com
+              password: password
+      responses:
+        '200':
+          description: Pomyślne uwierzytelnienie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Niepoprawne dane uwierzytelniające
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Unauthorized
+        '422':
+          description: Błąd walidacji danych wejściowych
+
+  /api/ping:
+    get:
+      summary: PING - Diagnostyka narzutu frameworka
+      description: |
+        Endpoint diagnostyczny izolujący narzut routingu HTTP oraz weryfikacji podpisu JWT w pamięci.
+        Nie wykonuje żadnych zapytań do bazy danych PostgreSQL (0 DB).
+      tags:
+        - Diagnostyka
+      responses:
+        '200':
+          description: Pomyślna weryfikacja tokenu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/tables:
+    get:
+      summary: EP1 - Lista stolików (Odczyt bazowy)
+      description: |
+        Zwraca stronicowaną listę stolików restauracyjnych posortowaną po numerze stolika.
+        Scenariusz S1 (werdykt) oraz S3 (baza odniesienia bez relacji).
+        Złożoność: 0 relacji / 0 JOIN.
+      tags:
+        - Stoliki (Tables)
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/DebugQueriesHeader'
+      responses:
+        '200':
+          description: Stronicowana lista stolików
+          headers:
+            X-Query-Count:
+              $ref: '#/components/headers/X-Query-Count'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTables'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/menu-items:
+    get:
+      summary: EP2 - Dostępne pozycje menu z daniami (1 relacja)
+      description: |
+        Zwraca stronicowaną listę dostępnych pozycji menu wraz z powiązanymi daniami (`MenuItem::with('dish')`).
+        Scenariusz S3 (główny cel werdyktu narzutu szerokości hydratacji 40 encji na 20 wierszy).
+        Złożoność: 1 relacja eager load (osobne zapytanie `SELECT IN`).
+      tags:
+        - Menu (Menu Items)
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/DebugQueriesHeader'
+      responses:
+        '200':
+          description: Stronicowana lista pozycji menu
+          headers:
+            X-Query-Count:
+              $ref: '#/components/headers/X-Query-Count'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMenuItems'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/orders:
+    get:
+      summary: EP3 - Lista zamówień (2 relacje pod obciążeniem)
+      description: |
+        Zwraca stronicowaną listę zamówień posortowaną malejąco po dacie zamówienia.
+        Ładuje relacje stolika i kelnera (`Order::with(['table', 'waiter'])`).
+        Menedżer widzi wszystkie zamówienia, kelner wyłącznie własne (`forUser`).
+        Scenariusz S2 (główny werdykt skalowalności pod stresem).
+      tags:
+        - Zamówienia (Orders)
+      parameters:
+        - $ref: '#/components/parameters/PageQuery'
+        - $ref: '#/components/parameters/DebugQueriesHeader'
+      responses:
+        '200':
+          description: Stronicowana lista zamówień
+          headers:
+            X-Query-Count:
+              $ref: '#/components/headers/X-Query-Count'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrders'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      summary: EP7 - Utworzenie zamówienia z pozycjami (Zapis transakcyjny)
+      description: |
+        Tworzy nowe zamówienie wraz z listą pozycji w ramach jednej transakcji bazodanowej (`DB::transaction`).
+        Weryfikuje istnienie stolika, dostępność pozycji menu, wstawia pozycje i aktualizuje kwotę łączną (`total_price`).
+        Scenariusz S2 (obserwacja ścieżki zapisu).
+      tags:
+        - Zamówienia (Orders)
+      parameters:
+        - $ref: '#/components/parameters/DebugQueriesHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreOrderRequest'
+            example:
+              table_id: 1
+              items:
+                - menu_item_id: 5
+                  quantity: 2
+                  notes: "Bez soli"
+                - menu_item_id: 12
+                  quantity: 1
+      responses:
+        '201':
+          description: Zamówienie utworzone pomyślnie
+          headers:
+            X-Query-Count:
+              $ref: '#/components/headers/X-Query-Count'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderWithItems'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          description: Błąd walidacji lub reguły biznesowej (niedostępne pozycje, brak stolika)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/orders/{order}:
+    get:
+      summary: EP4 - Szczegóły zamówienia (Głębokie zagnieżdżenie relacji)
+      description: |
+        Pobiera szczegóły pojedynczego zamówienia z 3-poziomowym zagnieżdżeniem relacji:
+        stolik, kelner, pozycje zamówienia, przypisane pozycje menu oraz dania
+        (`load(['table', 'waiter', 'orderItems.menuItem.dish'])`).
+        Scenariusz S3 (obserwacja narzutu głębokości drzewa relacji, ~10 encji).
+      tags:
+        - Zamówienia (Orders)
+      parameters:
+        - name: order
+          in: path
+          required: true
+          description: ID zamówienia (Route Model Binding)
+          schema:
+            type: integer
+            example: 1
+        - $ref: '#/components/parameters/DebugQueriesHeader'
+      responses:
+        '200':
+          description: Pełne szczegóły zamówienia z relacjami
+          headers:
+            X-Query-Count:
+              $ref: '#/components/headers/X-Query-Count'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Brak uprawnień do wglądu w zamówienie innego kelnera
+        '404':
+          description: Zamówienie o podanym ID nie istnieje
+
+  /api/orders/{order}/status:
+    patch:
+      summary: EP8 - Aktualizacja statusu zamówienia (Prosty UPDATE)
+      description: |
+        Aktualizuje status istniejącego zamówienia w miejscu (*in-place update*).
+        Scenariusz S1 (werdykt prostego zapisu).
+        Złożoność: 0 relacji, pojedyncza instrukcja `UPDATE`.
+      tags:
+        - Zamówienia (Orders)
+      parameters:
+        - name: order
+          in: path
+          required: true
+          description: ID zamówienia
+          schema:
+            type: integer
+            example: 1
+        - $ref: '#/components/parameters/DebugQueriesHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+            example:
+              status: paid
+      responses:
+        '200':
+          description: Zaktualizowane zamówienie
+          headers:
+            X-Query-Count:
+              $ref: '#/components/headers/X-Query-Count'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: Brak uprawnień do zmiany statusu
+        '404':
+          description: Zamówienie nie istnieje
+        '422':
+          description: Niepoprawny status
+
+  /api/dishes/{dish}/ingredients:
+    get:
+      summary: EP5 - Składniki dania (Relacja N:M przez pivot)
+      description: |
+        Zwraca danie wraz z listą składników powiązanych przez tabelę pośredniczącą `dish_ingredients`.
+        Złożoność: relacja wiele-do-wielu (N:M) z atrybutami pivota (`quantity`).
+        Zarezerwowane dla rozszerzonej pracy magisterskiej.
+      tags:
+        - Dania i Składniki (Dishes)
+      parameters:
+        - name: dish
+          in: path
+          required: true
+          description: ID dania
+          schema:
+            type: integer
+            example: 1
+        - $ref: '#/components/parameters/DebugQueriesHeader'
+      responses:
+        '200':
+          description: Danie wraz ze składnikami i tabelą pivot
+          headers:
+            X-Query-Count:
+              $ref: '#/components/headers/X-Query-Count'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DishWithIngredients'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Danie nie istnieje
+
+  /api/dashboard/summary:
+    get:
+      summary: EP6 - Statystyki sprzedaży wg kategorii (3 JOIN + Agregacje SQL)
+      description: |
+        Złożone zapytanie analityczne: łączy tabele `order_items`, `orders`, `menu_items`, `dishes`,
+        filtruje zamówienia z ostatnich 30 dni względem zamrożonej daty referencyjnej `BENCH_NOW` (33 469 zamówień),
+        grupuje po kategorii dania i wylicza `COUNT(DISTINCT)`, `SUM`, `AVG`.
+        Scenariusz S3 (obserwacja wąskiego gardła w silniku SQL).
+      tags:
+        - Raporty i Dashboard
+      parameters:
+        - $ref: '#/components/parameters/DebugQueriesHeader'
+      responses:
+        '200':
+          description: Zagregowane zestawienie sprzedaży
+          headers:
+            X-Query-Count:
+              $ref: '#/components/headers/X-Query-Count'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummaryResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /api/reservations:
+    post:
+      summary: EP9 - Rezerwacja stolika (Walidacja kolizji czasowych w bazie)
+      description: |
+        Tworzy rezerwację stolika z bazodanową kontrolą nakładania się przedziałów czasowych
+        (`EXCLUDE USING gist`). W przypadku kolizji zwraca błąd domeny HTTP 409 lub 422.
+        Zarezerwowane dla rozszerzonej pracy magisterskiej.
+      tags:
+        - Rezerwacje (Reservations)
+      parameters:
+        - $ref: '#/components/parameters/DebugQueriesHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreReservationRequest'
+            example:
+              table_id: 1
+              customer_name: "Jan Kowalski"
+              phone_number: "+48123456789"
+              reservation_date: "2026-12-01"
+              reservation_time: "18:00"
+              party_size: 4
+              duration_minutes: 120
+      responses:
+        '201':
+          description: Rezerwacja utworzona pomyślnie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          description: Konflikt terminu rezerwacji (nakładający się przedział czasowy)
+        '422':
+          description: Błąd walidacji lub rozmiar grupy przekracza pojemność stolika
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT (HS256) uzyskany z endpointu `/api/auth/login`.
+
+  parameters:
+    PageQuery:
+      name: page
+      in: query
+      required: false
+      description: Numer żądanej strony (domyślnie 1)
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    DebugQueriesHeader:
+      name: X-Debug-Queries
+      in: header
+      required: false
+      description: Opcjonalny nagłówek diagnostyczny aktywujący middleware zliczania zapytań SQL
+      schema:
+        type: string
+        example: "true"
+
+  headers:
+    X-Query-Count:
+      description: Liczba zapytań SQL wykonanych przez ORM podczas obsługi żądania
+      schema:
+        type: integer
+        example: 1
+
+  responses:
+    UnauthorizedError:
+      description: Brak autoryzacji lub nieprawidłowy token JWT
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            message: Unauthenticated.
+
+  schemas:
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: manager@example.com
+        password:
+          type: string
+          format: password
+          example: password
+
+    LoginResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          example: bearer
+        expires_in:
+          type: integer
+          example: 3600
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: One or more menu items are unavailable.
+        error:
+          type: string
+          example: Unauthorized
+
+    TableStatus:
+      type: string
+      enum:
+        - available
+        - occupied
+        - reserved
+        - cleaning
+      example: available
+
+    Table:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        table_number:
+          type: integer
+          example: 101
+        capacity:
+          type: integer
+          example: 4
+        status:
+          $ref: '#/components/schemas/TableStatus'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DishCategory:
+      type: string
+      enum:
+        - starter
+        - main
+        - dessert
+        - drink
+        - side
+      example: main
+
+    Dish:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Steak Wołowy"
+        category:
+          $ref: '#/components/schemas/DishCategory'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Ingredient:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Czosnek"
+        unit:
+          type: string
+          example: "g"
+        pivot:
+          type: object
+          properties:
+            dish_id:
+              type: integer
+            ingredient_id:
+              type: integer
+            quantity:
+              type: string
+              example: "15.00"
+            created_at:
+              type: string
+            updated_at:
+              type: string
+
+    DishWithIngredients:
+      allOf:
+        - $ref: '#/components/schemas/Dish'
+        - type: object
+          properties:
+            ingredients:
+              type: array
+              items:
+                $ref: '#/components/schemas/Ingredient'
+
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        dish_id:
+          type: integer
+          example: 1
+        price:
+          type: number
+          format: float
+          example: 45.50
+        is_available:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    MenuItemWithDish:
+      allOf:
+        - $ref: '#/components/schemas/MenuItem'
+        - type: object
+          properties:
+            dish:
+              $ref: '#/components/schemas/Dish'
+
+    OrderStatus:
+      type: string
+      enum:
+        - open
+        - paid
+        - cancelled
+      example: open
+
+    OrderItemStatus:
+      type: string
+      enum:
+        - pending
+        - in_progress
+        - completed
+        - cancelled
+      example: pending
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        order_id:
+          type: integer
+          example: 100
+        menu_item_id:
+          type: integer
+          example: 5
+        quantity:
+          type: integer
+          example: 2
+        unit_price:
+          type: number
+          format: float
+          example: 22.00
+        notes:
+          type: string
+          nullable: true
+          example: "Bez sosu"
+        status:
+          $ref: '#/components/schemas/OrderItemStatus'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    OrderItemNested:
+      allOf:
+        - $ref: '#/components/schemas/OrderItem'
+        - type: object
+          properties:
+            menu_item:
+              $ref: '#/components/schemas/MenuItemWithDish'
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        table_id:
+          type: integer
+          example: 2
+        user_id:
+          type: integer
+          example: 5
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        total_price:
+          type: number
+          format: float
+          example: 89.00
+        ordered_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    OrderWithRelationsSummary:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          properties:
+            table:
+              $ref: '#/components/schemas/Table'
+            waiter:
+              type: object
+              properties:
+                id:
+                  type: integer
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                role:
+                  type: string
+
+    OrderWithItems:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          properties:
+            order_items:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrderItem'
+
+    OrderDetail:
+      allOf:
+        - $ref: '#/components/schemas/OrderWithRelationsSummary'
+        - type: object
+          properties:
+            order_items:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrderItemNested'
+
+    StoreOrderItemRequest:
+      type: object
+      required:
+        - menu_item_id
+        - quantity
+      properties:
+        menu_item_id:
+          type: integer
+          example: 5
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+          example: "Bez cebuli"
+
+    StoreOrderRequest:
+      type: object
+      required:
+        - table_id
+        - items
+      properties:
+        table_id:
+          type: integer
+          example: 1
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/StoreOrderItemRequest'
+
+    UpdateOrderStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+
+    StoreReservationRequest:
+      type: object
+      required:
+        - table_id
+        - customer_name
+        - phone_number
+        - reservation_date
+        - reservation_time
+        - party_size
+      properties:
+        table_id:
+          type: integer
+          example: 1
+        customer_name:
+          type: string
+          maxLength: 255
+          example: "Jan Kowalski"
+        phone_number:
+          type: string
+          maxLength: 20
+          example: "+48123456789"
+        reservation_date:
+          type: string
+          format: date
+          example: "2026-12-01"
+        reservation_time:
+          type: string
+          pattern: '^[0-2][0-9]:[0-5][0-9]$'
+          example: "18:30"
+        party_size:
+          type: integer
+          minimum: 1
+          maximum: 20
+          example: 4
+        duration_minutes:
+          type: integer
+          minimum: 30
+          maximum: 480
+          default: 120
+          example: 120
+        notes:
+          type: string
+          maxLength: 1000
+          nullable: true
+
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        table_id:
+          type: integer
+        customer_name:
+          type: string
+        phone_number:
+          type: string
+        reservation_date:
+          type: string
+          format: date
+        reservation_time:
+          type: string
+        party_size:
+          type: integer
+        duration_minutes:
+          type: integer
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled]
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CategorySalesStat:
+      type: object
+      properties:
+        category:
+          type: string
+          example: main
+        orders_count:
+          type: integer
+          example: 12450
+        items_sold:
+          type: integer
+          example: 37120
+        revenue:
+          type: number
+          format: float
+          example: 1542890.50
+        avg_item_value:
+          type: number
+          format: float
+          example: 41.56
+
+    DashboardSummaryResponse:
+      type: object
+      properties:
+        period:
+          type: string
+          example: "30_days"
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategorySalesStat'
+
+    PaginationLink:
+      type: object
+      properties:
+        url:
+          type: string
+          nullable: true
+          example: "http://localhost:8080/api/tables?page=2"
+        label:
+          type: string
+          example: "2"
+        active:
+          type: boolean
+          example: false
+
+    PaginationEnvelope:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        first_page_url:
+          type: string
+          example: "http://localhost:8080/api/tables?page=1"
+        from:
+          type: integer
+          nullable: true
+          example: 1
+        last_page:
+          type: integer
+          example: 10
+        last_page_url:
+          type: string
+          example: "http://localhost:8080/api/tables?page=10"
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaginationLink'
+        next_page_url:
+          type: string
+          nullable: true
+          example: "http://localhost:8080/api/tables?page=2"
+        path:
+          type: string
+          example: "http://localhost:8080/api/tables"
+        per_page:
+          type: integer
+          example: 20
+        prev_page_url:
+          type: string
+          nullable: true
+          example: null
+        to:
+          type: integer
+          nullable: true
+          example: 20
+        total:
+          type: integer
+          example: 200
+
+    PaginatedTables:
+      allOf:
+        - $ref: '#/components/schemas/PaginationEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/Table'
+
+    PaginatedMenuItems:
+      allOf:
+        - $ref: '#/components/schemas/PaginationEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/MenuItemWithDish'
+
+    PaginatedOrders:
+      allOf:
+        - $ref: '#/components/schemas/PaginationEnvelope'
+        - type: object
+          properties:
+            data:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrderWithRelationsSummary'
