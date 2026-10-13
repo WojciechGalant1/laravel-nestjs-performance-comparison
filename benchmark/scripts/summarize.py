@@ -28,7 +28,7 @@ Definitions (Sections 3.3, 3.5 and 3.6 of the methodology):
   every endpoint that set requires, (a) X(N)/(N·X(1)) >= 0.80, (b) application
   CPU is below 80% of its container limit, and (c) PostgreSQL CPU is below 80%
   of its container limit. The set is the longest prefix of {1, 2, 4, 10} that
-  passes. H1 uses one set over EP1, EP2 and EP8. H3 uses one set per pair
+  passes. H1 uses one set over EP1 and EP8. H3 uses one set per pair
   (EP1, EP_k).
 - Two secondary figures are printed beside the verdict and do not enter it.
   Little's law mean is concurrency divided by throughput (N/RPS). CPU time per

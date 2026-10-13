@@ -1,0 +1,682 @@
+2026-10-11 09:27:25,249 INFO o.a.j.u.JMeterUtils: Setting Locale to en_EN
+2026-10-11 09:27:25,269 INFO o.a.j.JMeter: Loading user properties from: /opt/jmeter/bin/user.properties
+2026-10-11 09:27:25,269 INFO o.a.j.JMeter: Loading system properties from: /opt/jmeter/bin/system.properties
+2026-10-11 09:27:25,269 INFO o.a.j.JMeter: Loading additional properties from: /tests/run.properties
+2026-10-11 09:27:25,269 INFO o.a.j.JMeter: Loading additional properties from: /tests/data/ranges.properties
+2026-10-11 09:27:25,270 INFO o.a.j.JMeter: Setting JMeter property: host=laravel-nginx
+2026-10-11 09:27:25,270 INFO o.a.j.JMeter: Setting JMeter property: port=80
+2026-10-11 09:27:25,270 INFO o.a.j.JMeter: Setting JMeter property: rampup=10
+2026-10-11 09:27:25,270 INFO o.a.j.JMeter: Setting JMeter property: endpoint=EP7
+2026-10-11 09:27:25,270 INFO o.a.j.JMeter: Setting JMeter property: users=200
+2026-10-11 09:27:25,270 INFO o.a.j.JMeter: Setting JMeter property: duration=120
+2026-10-11 09:27:25,275 INFO o.a.j.JMeter: Copyright (c) 1998-2024 The Apache Software Foundation
+2026-10-11 09:27:25,275 INFO o.a.j.JMeter: Version 5.6.3
+2026-10-11 09:27:25,275 INFO o.a.j.JMeter: java.version=21.0.12.1
+2026-10-11 09:27:25,275 INFO o.a.j.JMeter: java.vm.name=OpenJDK 64-Bit Server VM
+2026-10-11 09:27:25,275 INFO o.a.j.JMeter: os.name=Linux
+2026-10-11 09:27:25,275 INFO o.a.j.JMeter: os.arch=amd64
+2026-10-11 09:27:25,275 INFO o.a.j.JMeter: os.version=6.6.87.2-microsoft-standard-WSL2
+2026-10-11 09:27:25,275 INFO o.a.j.JMeter: file.encoding=UTF-8
+2026-10-11 09:27:25,276 INFO o.a.j.JMeter: java.awt.headless=true
+2026-10-11 09:27:25,276 INFO o.a.j.JMeter: Max memory     =4294967296
+2026-10-11 09:27:25,276 INFO o.a.j.JMeter: Available Processors =12
+2026-10-11 09:27:25,285 INFO o.a.j.JMeter: Default Locale=English (EN)
+2026-10-11 09:27:25,285 INFO o.a.j.JMeter: JMeter  Locale=English (EN)
+2026-10-11 09:27:25,285 INFO o.a.j.JMeter: JMeterHome=/opt/jmeter
+2026-10-11 09:27:25,285 INFO o.a.j.JMeter: user.dir  =/tests
+2026-10-11 09:27:25,285 INFO o.a.j.JMeter: PWD       =/tests
+2026-10-11 09:27:25,285 INFO o.a.j.JMeter: IP: 172.19.0.5 Name: 0217f97dca97 FullName: 0217f97dca97
+2026-10-11 09:27:25,294 INFO o.a.j.s.FileServer: Default base='/tests'
+2026-10-11 09:27:25,295 INFO o.a.j.s.FileServer: Set new base='/tests'
+2026-10-11 09:27:25,425 INFO o.a.j.s.SaveService: Testplan (JMX) version: 2.2. Testlog (JTL) version: 2.2
+2026-10-11 09:27:25,445 INFO o.a.j.s.SaveService: Using SaveService properties version 5.0
+2026-10-11 09:27:25,447 INFO o.a.j.s.SaveService: Using SaveService properties file encoding UTF-8
+2026-10-11 09:27:25,450 INFO o.a.j.s.SaveService: Loading file: /tests/s2.jmx
+2026-10-11 09:27:25,486 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/html is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2026-10-11 09:27:25,486 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xhtml+xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2026-10-11 09:27:25,486 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2026-10-11 09:27:25,486 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2026-10-11 09:27:25,486 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/vnd.wap.wml is org.apache.jmeter.protocol.http.parser.RegexpHTMLParser
+2026-10-11 09:27:25,487 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/css is org.apache.jmeter.protocol.http.parser.CssParser
+2026-10-11 09:27:25,520 INFO o.a.j.JMeter: Creating summariser <summary>
+2026-10-11 09:27:25,532 INFO o.a.j.e.StandardJMeterEngine: Running the test!
+2026-10-11 09:27:25,533 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2026-10-11 09:27:25,533 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2026-10-11 09:27:25,536 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must contain the string: '.functions.'
+2026-10-11 09:27:25,536 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must not contain the string: '.gui.'
+2026-10-11 09:27:25,712 INFO o.a.j.JMeter: Running test (1791710845712)
+2026-10-11 09:27:25,713 INFO o.a.j.e.StandardJMeterEngine: Starting setUp thread groups
+2026-10-11 09:27:25,713 INFO o.a.j.e.StandardJMeterEngine: Starting setUp ThreadGroup: 1 : setUp - login 
+2026-10-11 09:27:25,713 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group setUp - login.
+2026-10-11 09:27:25,713 INFO o.a.j.e.StandardJMeterEngine: Test will stop abruptly on error
+2026-10-11 09:27:25,713 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=1 ramp-up=1 delayedStart=false
+2026-10-11 09:27:25,716 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2026-10-11 09:27:25,716 INFO o.a.j.e.StandardJMeterEngine: Waiting for all setup thread groups to exit
+2026-10-11 09:27:25,717 INFO o.a.j.t.JMeterThread: Thread started: setUp - login 1-1
+2026-10-11 09:27:25,726 INFO o.a.j.p.h.s.HTTPHCAbstractImpl: Local host = 0217f97dca97
+2026-10-11 09:27:25,730 INFO o.a.j.p.h.s.HTTPHC4Impl: HTTP request retry count = 0
+2026-10-11 09:27:25,730 INFO o.a.j.s.SampleResult: Note: Sample TimeStamps are START times
+2026-10-11 09:27:25,731 INFO o.a.j.s.SampleResult: sampleresult.default.encoding is set to UTF-8
+2026-10-11 09:27:25,731 INFO o.a.j.s.SampleResult: sampleresult.useNanoTime=true
+2026-10-11 09:27:25,731 INFO o.a.j.s.SampleResult: sampleresult.nanoThreadSleep=5000
+2026-10-11 09:27:26,373 INFO o.a.j.t.JMeterThread: Thread is done: setUp - login 1-1
+2026-10-11 09:27:26,373 INFO o.a.j.t.JMeterThread: Thread finished: setUp - login 1-1
+2026-10-11 09:27:26,374 INFO o.a.j.e.StandardJMeterEngine: All Setup Threads have ended
+2026-10-11 09:27:26,395 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 1 : S2
+2026-10-11 09:27:26,395 INFO o.a.j.e.StandardJMeterEngine: Starting 200 threads for group S2.
+2026-10-11 09:27:26,395 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2026-10-11 09:27:26,395 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=200 ramp-up=10 delayedStart=false
+2026-10-11 09:27:26,404 INFO o.a.j.t.JMeterThread: Thread started: S2 1-1
+2026-10-11 09:27:26,404 INFO o.a.j.s.FileServer: Stored: /tests/data/available_menu_items.csv
+2026-10-11 09:27:26,454 INFO o.a.j.t.JMeterThread: Thread started: S2 1-2
+2026-10-11 09:27:26,479 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2026-10-11 09:27:26,480 INFO o.a.j.e.StandardJMeterEngine: All thread groups have been started
+2026-10-11 09:27:26,502 INFO o.a.j.t.JMeterThread: Thread started: S2 1-3
+2026-10-11 09:27:26,551 INFO o.a.j.t.JMeterThread: Thread started: S2 1-4
+2026-10-11 09:27:26,600 INFO o.a.j.t.JMeterThread: Thread started: S2 1-5
+2026-10-11 09:27:26,650 INFO o.a.j.t.JMeterThread: Thread started: S2 1-6
+2026-10-11 09:27:26,699 INFO o.a.j.t.JMeterThread: Thread started: S2 1-7
+2026-10-11 09:27:26,749 INFO o.a.j.t.JMeterThread: Thread started: S2 1-8
+2026-10-11 09:27:26,797 INFO o.a.j.t.JMeterThread: Thread started: S2 1-9
+2026-10-11 09:27:26,848 INFO o.a.j.t.JMeterThread: Thread started: S2 1-10
+2026-10-11 09:27:26,896 INFO o.a.j.t.JMeterThread: Thread started: S2 1-11
+2026-10-11 09:27:26,946 INFO o.a.j.t.JMeterThread: Thread started: S2 1-12
+2026-10-11 09:27:26,997 INFO o.a.j.t.JMeterThread: Thread started: S2 1-13
+2026-10-11 09:27:27,046 INFO o.a.j.t.JMeterThread: Thread started: S2 1-14
+2026-10-11 09:27:27,096 INFO o.a.j.t.JMeterThread: Thread started: S2 1-15
+2026-10-11 09:27:27,146 INFO o.a.j.t.JMeterThread: Thread started: S2 1-16
+2026-10-11 09:27:27,196 INFO o.a.j.t.JMeterThread: Thread started: S2 1-17
+2026-10-11 09:27:27,246 INFO o.a.j.t.JMeterThread: Thread started: S2 1-18
+2026-10-11 09:27:27,296 INFO o.a.j.t.JMeterThread: Thread started: S2 1-19
+2026-10-11 09:27:27,346 INFO o.a.j.t.JMeterThread: Thread started: S2 1-20
+2026-10-11 09:27:27,395 INFO o.a.j.t.JMeterThread: Thread started: S2 1-21
+2026-10-11 09:27:27,446 INFO o.a.j.t.JMeterThread: Thread started: S2 1-22
+2026-10-11 09:27:27,496 INFO o.a.j.t.JMeterThread: Thread started: S2 1-23
+2026-10-11 09:27:27,546 INFO o.a.j.t.JMeterThread: Thread started: S2 1-24
+2026-10-11 09:27:27,595 INFO o.a.j.t.JMeterThread: Thread started: S2 1-25
+2026-10-11 09:27:27,646 INFO o.a.j.t.JMeterThread: Thread started: S2 1-26
+2026-10-11 09:27:27,695 INFO o.a.j.t.JMeterThread: Thread started: S2 1-27
+2026-10-11 09:27:27,746 INFO o.a.j.t.JMeterThread: Thread started: S2 1-28
+2026-10-11 09:27:27,796 INFO o.a.j.t.JMeterThread: Thread started: S2 1-29
+2026-10-11 09:27:27,846 INFO o.a.j.t.JMeterThread: Thread started: S2 1-30
+2026-10-11 09:27:27,896 INFO o.a.j.t.JMeterThread: Thread started: S2 1-31
+2026-10-11 09:27:27,946 INFO o.a.j.t.JMeterThread: Thread started: S2 1-32
+2026-10-11 09:27:27,996 INFO o.a.j.t.JMeterThread: Thread started: S2 1-33
+2026-10-11 09:27:28,046 INFO o.a.j.t.JMeterThread: Thread started: S2 1-34
+2026-10-11 09:27:28,096 INFO o.a.j.t.JMeterThread: Thread started: S2 1-35
+2026-10-11 09:27:28,146 INFO o.a.j.t.JMeterThread: Thread started: S2 1-36
+2026-10-11 09:27:28,195 INFO o.a.j.t.JMeterThread: Thread started: S2 1-37
+2026-10-11 09:27:28,246 INFO o.a.j.t.JMeterThread: Thread started: S2 1-38
+2026-10-11 09:27:28,296 INFO o.a.j.t.JMeterThread: Thread started: S2 1-39
+2026-10-11 09:27:28,346 INFO o.a.j.t.JMeterThread: Thread started: S2 1-40
+2026-10-11 09:27:28,396 INFO o.a.j.t.JMeterThread: Thread started: S2 1-41
+2026-10-11 09:27:28,446 INFO o.a.j.t.JMeterThread: Thread started: S2 1-42
+2026-10-11 09:27:28,496 INFO o.a.j.t.JMeterThread: Thread started: S2 1-43
+2026-10-11 09:27:28,546 INFO o.a.j.t.JMeterThread: Thread started: S2 1-44
+2026-10-11 09:27:28,596 INFO o.a.j.t.JMeterThread: Thread started: S2 1-45
+2026-10-11 09:27:28,647 INFO o.a.j.t.JMeterThread: Thread started: S2 1-46
+2026-10-11 09:27:28,696 INFO o.a.j.t.JMeterThread: Thread started: S2 1-47
+2026-10-11 09:27:28,746 INFO o.a.j.t.JMeterThread: Thread started: S2 1-48
+2026-10-11 09:27:28,796 INFO o.a.j.t.JMeterThread: Thread started: S2 1-49
+2026-10-11 09:27:28,846 INFO o.a.j.t.JMeterThread: Thread started: S2 1-50
+2026-10-11 09:27:28,896 INFO o.a.j.t.JMeterThread: Thread started: S2 1-51
+2026-10-11 09:27:28,946 INFO o.a.j.t.JMeterThread: Thread started: S2 1-52
+2026-10-11 09:27:28,997 INFO o.a.j.t.JMeterThread: Thread started: S2 1-53
+2026-10-11 09:27:29,046 INFO o.a.j.t.JMeterThread: Thread started: S2 1-54
+2026-10-11 09:27:29,096 INFO o.a.j.t.JMeterThread: Thread started: S2 1-55
+2026-10-11 09:27:29,146 INFO o.a.j.t.JMeterThread: Thread started: S2 1-56
+2026-10-11 09:27:29,196 INFO o.a.j.t.JMeterThread: Thread started: S2 1-57
+2026-10-11 09:27:29,246 INFO o.a.j.t.JMeterThread: Thread started: S2 1-58
+2026-10-11 09:27:29,296 INFO o.a.j.t.JMeterThread: Thread started: S2 1-59
+2026-10-11 09:27:29,346 INFO o.a.j.t.JMeterThread: Thread started: S2 1-60
+2026-10-11 09:27:29,396 INFO o.a.j.t.JMeterThread: Thread started: S2 1-61
+2026-10-11 09:27:29,445 INFO o.a.j.t.JMeterThread: Thread started: S2 1-62
+2026-10-11 09:27:29,496 INFO o.a.j.t.JMeterThread: Thread started: S2 1-63
+2026-10-11 09:27:29,546 INFO o.a.j.t.JMeterThread: Thread started: S2 1-64
+2026-10-11 09:27:29,596 INFO o.a.j.t.JMeterThread: Thread started: S2 1-65
+2026-10-11 09:27:29,646 INFO o.a.j.t.JMeterThread: Thread started: S2 1-66
+2026-10-11 09:27:29,696 INFO o.a.j.t.JMeterThread: Thread started: S2 1-67
+2026-10-11 09:27:29,745 INFO o.a.j.t.JMeterThread: Thread started: S2 1-68
+2026-10-11 09:27:29,796 INFO o.a.j.t.JMeterThread: Thread started: S2 1-69
+2026-10-11 09:27:29,846 INFO o.a.j.t.JMeterThread: Thread started: S2 1-70
+2026-10-11 09:27:29,895 INFO o.a.j.t.JMeterThread: Thread started: S2 1-71
+2026-10-11 09:27:29,946 INFO o.a.j.t.JMeterThread: Thread started: S2 1-72
+2026-10-11 09:27:29,996 INFO o.a.j.t.JMeterThread: Thread started: S2 1-73
+2026-10-11 09:27:30,012 INFO o.a.j.r.Summariser: summary +   1501 in 00:00:04 =  349.2/s Avg:    82 Min:    10 Max:   271 Err:     0 (0.00%) Active: 73 Started: 73 Finished: 0
+2026-10-11 09:27:30,045 INFO o.a.j.t.JMeterThread: Thread started: S2 1-74
+2026-10-11 09:27:30,096 INFO o.a.j.t.JMeterThread: Thread started: S2 1-75
+2026-10-11 09:27:30,146 INFO o.a.j.t.JMeterThread: Thread started: S2 1-76
+2026-10-11 09:27:30,195 INFO o.a.j.t.JMeterThread: Thread started: S2 1-77
+2026-10-11 09:27:30,246 INFO o.a.j.t.JMeterThread: Thread started: S2 1-78
+2026-10-11 09:27:30,296 INFO o.a.j.t.JMeterThread: Thread started: S2 1-79
+2026-10-11 09:27:30,345 INFO o.a.j.t.JMeterThread: Thread started: S2 1-80
+2026-10-11 09:27:30,396 INFO o.a.j.t.JMeterThread: Thread started: S2 1-81
+2026-10-11 09:27:30,446 INFO o.a.j.t.JMeterThread: Thread started: S2 1-82
+2026-10-11 09:27:30,495 INFO o.a.j.t.JMeterThread: Thread started: S2 1-83
+2026-10-11 09:27:30,545 INFO o.a.j.t.JMeterThread: Thread started: S2 1-84
+2026-10-11 09:27:30,596 INFO o.a.j.t.JMeterThread: Thread started: S2 1-85
+2026-10-11 09:27:30,645 INFO o.a.j.t.JMeterThread: Thread started: S2 1-86
+2026-10-11 09:27:30,696 INFO o.a.j.t.JMeterThread: Thread started: S2 1-87
+2026-10-11 09:27:30,746 INFO o.a.j.t.JMeterThread: Thread started: S2 1-88
+2026-10-11 09:27:30,796 INFO o.a.j.t.JMeterThread: Thread started: S2 1-89
+2026-10-11 09:27:30,846 INFO o.a.j.t.JMeterThread: Thread started: S2 1-90
+2026-10-11 09:27:30,895 INFO o.a.j.t.JMeterThread: Thread started: S2 1-91
+2026-10-11 09:27:30,946 INFO o.a.j.t.JMeterThread: Thread started: S2 1-92
+2026-10-11 09:27:30,997 INFO o.a.j.t.JMeterThread: Thread started: S2 1-93
+2026-10-11 09:27:31,046 INFO o.a.j.t.JMeterThread: Thread started: S2 1-94
+2026-10-11 09:27:31,096 INFO o.a.j.t.JMeterThread: Thread started: S2 1-95
+2026-10-11 09:27:31,145 INFO o.a.j.t.JMeterThread: Thread started: S2 1-96
+2026-10-11 09:27:31,196 INFO o.a.j.t.JMeterThread: Thread started: S2 1-97
+2026-10-11 09:27:31,246 INFO o.a.j.t.JMeterThread: Thread started: S2 1-98
+2026-10-11 09:27:31,296 INFO o.a.j.t.JMeterThread: Thread started: S2 1-99
+2026-10-11 09:27:31,346 INFO o.a.j.t.JMeterThread: Thread started: S2 1-100
+2026-10-11 09:27:31,396 INFO o.a.j.t.JMeterThread: Thread started: S2 1-101
+2026-10-11 09:27:31,445 INFO o.a.j.t.JMeterThread: Thread started: S2 1-102
+2026-10-11 09:27:31,495 INFO o.a.j.t.JMeterThread: Thread started: S2 1-103
+2026-10-11 09:27:31,546 INFO o.a.j.t.JMeterThread: Thread started: S2 1-104
+2026-10-11 09:27:31,596 INFO o.a.j.t.JMeterThread: Thread started: S2 1-105
+2026-10-11 09:27:31,645 INFO o.a.j.t.JMeterThread: Thread started: S2 1-106
+2026-10-11 09:27:31,696 INFO o.a.j.t.JMeterThread: Thread started: S2 1-107
+2026-10-11 09:27:31,751 INFO o.a.j.t.JMeterThread: Thread started: S2 1-108
+2026-10-11 09:27:31,795 INFO o.a.j.t.JMeterThread: Thread started: S2 1-109
+2026-10-11 09:27:31,846 INFO o.a.j.t.JMeterThread: Thread started: S2 1-110
+2026-10-11 09:27:31,897 INFO o.a.j.t.JMeterThread: Thread started: S2 1-111
+2026-10-11 09:27:31,945 INFO o.a.j.t.JMeterThread: Thread started: S2 1-112
+2026-10-11 09:27:31,996 INFO o.a.j.t.JMeterThread: Thread started: S2 1-113
+2026-10-11 09:27:32,046 INFO o.a.j.t.JMeterThread: Thread started: S2 1-114
+2026-10-11 09:27:32,095 INFO o.a.j.t.JMeterThread: Thread started: S2 1-115
+2026-10-11 09:27:32,146 INFO o.a.j.t.JMeterThread: Thread started: S2 1-116
+2026-10-11 09:27:32,196 INFO o.a.j.t.JMeterThread: Thread started: S2 1-117
+2026-10-11 09:27:32,246 INFO o.a.j.t.JMeterThread: Thread started: S2 1-118
+2026-10-11 09:27:32,297 INFO o.a.j.t.JMeterThread: Thread started: S2 1-119
+2026-10-11 09:27:32,345 INFO o.a.j.t.JMeterThread: Thread started: S2 1-120
+2026-10-11 09:27:32,396 INFO o.a.j.t.JMeterThread: Thread started: S2 1-121
+2026-10-11 09:27:32,446 INFO o.a.j.t.JMeterThread: Thread started: S2 1-122
+2026-10-11 09:27:32,496 INFO o.a.j.t.JMeterThread: Thread started: S2 1-123
+2026-10-11 09:27:32,547 INFO o.a.j.t.JMeterThread: Thread started: S2 1-124
+2026-10-11 09:27:32,595 INFO o.a.j.t.JMeterThread: Thread started: S2 1-125
+2026-10-11 09:27:32,646 INFO o.a.j.t.JMeterThread: Thread started: S2 1-126
+2026-10-11 09:27:32,696 INFO o.a.j.t.JMeterThread: Thread started: S2 1-127
+2026-10-11 09:27:32,746 INFO o.a.j.t.JMeterThread: Thread started: S2 1-128
+2026-10-11 09:27:32,795 INFO o.a.j.t.JMeterThread: Thread started: S2 1-129
+2026-10-11 09:27:32,846 INFO o.a.j.t.JMeterThread: Thread started: S2 1-130
+2026-10-11 09:27:32,895 INFO o.a.j.t.JMeterThread: Thread started: S2 1-131
+2026-10-11 09:27:32,946 INFO o.a.j.t.JMeterThread: Thread started: S2 1-132
+2026-10-11 09:27:32,996 INFO o.a.j.t.JMeterThread: Thread started: S2 1-133
+2026-10-11 09:27:33,047 INFO o.a.j.t.JMeterThread: Thread started: S2 1-134
+2026-10-11 09:27:33,097 INFO o.a.j.t.JMeterThread: Thread started: S2 1-135
+2026-10-11 09:27:33,146 INFO o.a.j.t.JMeterThread: Thread started: S2 1-136
+2026-10-11 09:27:33,196 INFO o.a.j.t.JMeterThread: Thread started: S2 1-137
+2026-10-11 09:27:33,245 INFO o.a.j.t.JMeterThread: Thread started: S2 1-138
+2026-10-11 09:27:33,296 INFO o.a.j.t.JMeterThread: Thread started: S2 1-139
+2026-10-11 09:27:33,345 INFO o.a.j.t.JMeterThread: Thread started: S2 1-140
+2026-10-11 09:27:33,395 INFO o.a.j.t.JMeterThread: Thread started: S2 1-141
+2026-10-11 09:27:33,446 INFO o.a.j.t.JMeterThread: Thread started: S2 1-142
+2026-10-11 09:27:33,495 INFO o.a.j.t.JMeterThread: Thread started: S2 1-143
+2026-10-11 09:27:33,545 INFO o.a.j.t.JMeterThread: Thread started: S2 1-144
+2026-10-11 09:27:33,596 INFO o.a.j.t.JMeterThread: Thread started: S2 1-145
+2026-10-11 09:27:33,646 INFO o.a.j.t.JMeterThread: Thread started: S2 1-146
+2026-10-11 09:27:33,695 INFO o.a.j.t.JMeterThread: Thread started: S2 1-147
+2026-10-11 09:27:33,746 INFO o.a.j.t.JMeterThread: Thread started: S2 1-148
+2026-10-11 09:27:33,795 INFO o.a.j.t.JMeterThread: Thread started: S2 1-149
+2026-10-11 09:27:33,845 INFO o.a.j.t.JMeterThread: Thread started: S2 1-150
+2026-10-11 09:27:33,897 INFO o.a.j.t.JMeterThread: Thread started: S2 1-151
+2026-10-11 09:27:33,945 INFO o.a.j.t.JMeterThread: Thread started: S2 1-152
+2026-10-11 09:27:33,995 INFO o.a.j.t.JMeterThread: Thread started: S2 1-153
+2026-10-11 09:27:34,046 INFO o.a.j.t.JMeterThread: Thread started: S2 1-154
+2026-10-11 09:27:34,097 INFO o.a.j.t.JMeterThread: Thread started: S2 1-155
+2026-10-11 09:27:34,145 INFO o.a.j.t.JMeterThread: Thread started: S2 1-156
+2026-10-11 09:27:34,196 INFO o.a.j.t.JMeterThread: Thread started: S2 1-157
+2026-10-11 09:27:34,246 INFO o.a.j.t.JMeterThread: Thread started: S2 1-158
+2026-10-11 09:27:34,295 INFO o.a.j.t.JMeterThread: Thread started: S2 1-159
+2026-10-11 09:27:34,346 INFO o.a.j.t.JMeterThread: Thread started: S2 1-160
+2026-10-11 09:27:34,396 INFO o.a.j.t.JMeterThread: Thread started: S2 1-161
+2026-10-11 09:27:34,445 INFO o.a.j.t.JMeterThread: Thread started: S2 1-162
+2026-10-11 09:27:34,495 INFO o.a.j.t.JMeterThread: Thread started: S2 1-163
+2026-10-11 09:27:34,546 INFO o.a.j.t.JMeterThread: Thread started: S2 1-164
+2026-10-11 09:27:34,595 INFO o.a.j.t.JMeterThread: Thread started: S2 1-165
+2026-10-11 09:27:34,645 INFO o.a.j.t.JMeterThread: Thread started: S2 1-166
+2026-10-11 09:27:34,696 INFO o.a.j.t.JMeterThread: Thread started: S2 1-167
+2026-10-11 09:27:34,746 INFO o.a.j.t.JMeterThread: Thread started: S2 1-168
+2026-10-11 09:27:34,796 INFO o.a.j.t.JMeterThread: Thread started: S2 1-169
+2026-10-11 09:27:34,845 INFO o.a.j.t.JMeterThread: Thread started: S2 1-170
+2026-10-11 09:27:34,897 INFO o.a.j.t.JMeterThread: Thread started: S2 1-171
+2026-10-11 09:27:34,946 INFO o.a.j.t.JMeterThread: Thread started: S2 1-172
+2026-10-11 09:27:34,995 INFO o.a.j.t.JMeterThread: Thread started: S2 1-173
+2026-10-11 09:27:35,046 INFO o.a.j.t.JMeterThread: Thread started: S2 1-174
+2026-10-11 09:27:35,097 INFO o.a.j.t.JMeterThread: Thread started: S2 1-175
+2026-10-11 09:27:35,145 INFO o.a.j.t.JMeterThread: Thread started: S2 1-176
+2026-10-11 09:27:35,195 INFO o.a.j.t.JMeterThread: Thread started: S2 1-177
+2026-10-11 09:27:35,246 INFO o.a.j.t.JMeterThread: Thread started: S2 1-178
+2026-10-11 09:27:35,295 INFO o.a.j.t.JMeterThread: Thread started: S2 1-179
+2026-10-11 09:27:35,345 INFO o.a.j.t.JMeterThread: Thread started: S2 1-180
+2026-10-11 09:27:35,395 INFO o.a.j.t.JMeterThread: Thread started: S2 1-181
+2026-10-11 09:27:35,446 INFO o.a.j.t.JMeterThread: Thread started: S2 1-182
+2026-10-11 09:27:35,495 INFO o.a.j.t.JMeterThread: Thread started: S2 1-183
+2026-10-11 09:27:35,545 INFO o.a.j.t.JMeterThread: Thread started: S2 1-184
+2026-10-11 09:27:35,597 INFO o.a.j.t.JMeterThread: Thread started: S2 1-185
+2026-10-11 09:27:35,646 INFO o.a.j.t.JMeterThread: Thread started: S2 1-186
+2026-10-11 09:27:35,695 INFO o.a.j.t.JMeterThread: Thread started: S2 1-187
+2026-10-11 09:27:35,748 INFO o.a.j.t.JMeterThread: Thread started: S2 1-188
+2026-10-11 09:27:35,796 INFO o.a.j.t.JMeterThread: Thread started: S2 1-189
+2026-10-11 09:27:35,845 INFO o.a.j.t.JMeterThread: Thread started: S2 1-190
+2026-10-11 09:27:35,895 INFO o.a.j.t.JMeterThread: Thread started: S2 1-191
+2026-10-11 09:27:35,946 INFO o.a.j.t.JMeterThread: Thread started: S2 1-192
+2026-10-11 09:27:35,995 INFO o.a.j.t.JMeterThread: Thread started: S2 1-193
+2026-10-11 09:27:36,046 INFO o.a.j.t.JMeterThread: Thread started: S2 1-194
+2026-10-11 09:27:36,095 INFO o.a.j.t.JMeterThread: Thread started: S2 1-195
+2026-10-11 09:27:36,145 INFO o.a.j.t.JMeterThread: Thread started: S2 1-196
+2026-10-11 09:27:36,196 INFO o.a.j.t.JMeterThread: Thread started: S2 1-197
+2026-10-11 09:27:36,246 INFO o.a.j.t.JMeterThread: Thread started: S2 1-198
+2026-10-11 09:27:36,295 INFO o.a.j.t.JMeterThread: Thread started: S2 1-199
+2026-10-11 09:27:36,346 INFO o.a.j.t.JMeterThread: Thread started: S2 1-200
+2026-10-11 09:28:00,011 INFO o.a.j.r.Summariser: summary +  13436 in 00:00:30 =  447.9/s Avg:   400 Min:   162 Max:   510 Err:     0 (0.00%) Active: 200 Started: 200 Finished: 0
+2026-10-11 09:28:00,011 INFO o.a.j.r.Summariser: summary =  14937 in 00:00:34 =  435.5/s Avg:   368 Min:    10 Max:   510 Err:     0 (0.00%)
+2026-10-11 09:28:30,000 INFO o.a.j.r.Summariser: summary +  13688 in 00:00:30 =  456.4/s Avg:   425 Min:   409 Max:   503 Err:     0 (0.00%) Active: 200 Started: 200 Finished: 0
+2026-10-11 09:28:30,001 INFO o.a.j.r.Summariser: summary =  28625 in 00:01:04 =  445.3/s Avg:   396 Min:    10 Max:   510 Err:     0 (0.00%)
+2026-10-11 09:29:00,002 INFO o.a.j.r.Summariser: summary +  13710 in 00:00:30 =  457.0/s Avg:   425 Min:   409 Max:   543 Err:     0 (0.00%) Active: 200 Started: 200 Finished: 0
+2026-10-11 09:29:00,003 INFO o.a.j.r.Summariser: summary =  42335 in 00:01:34 =  449.0/s Avg:   405 Min:    10 Max:   543 Err:     0 (0.00%)
+2026-10-11 09:29:26,405 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-3
+2026-10-11 09:29:26,405 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-3
+2026-10-11 09:29:26,410 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-8
+2026-10-11 09:29:26,410 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-8
+2026-10-11 09:29:26,418 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-28
+2026-10-11 09:29:26,418 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-28
+2026-10-11 09:29:26,431 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-27
+2026-10-11 09:29:26,431 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-27
+2026-10-11 09:29:26,438 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-12
+2026-10-11 09:29:26,439 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-12
+2026-10-11 09:29:26,440 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-60
+2026-10-11 09:29:26,440 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-60
+2026-10-11 09:29:26,444 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-103
+2026-10-11 09:29:26,444 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-103
+2026-10-11 09:29:26,447 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-53
+2026-10-11 09:29:26,447 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-53
+2026-10-11 09:29:26,453 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-80
+2026-10-11 09:29:26,453 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-80
+2026-10-11 09:29:26,455 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-15
+2026-10-11 09:29:26,455 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-15
+2026-10-11 09:29:26,461 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-91
+2026-10-11 09:29:26,461 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-91
+2026-10-11 09:29:26,463 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-43
+2026-10-11 09:29:26,463 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-43
+2026-10-11 09:29:26,465 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-18
+2026-10-11 09:29:26,465 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-18
+2026-10-11 09:29:26,466 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-51
+2026-10-11 09:29:26,466 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-51
+2026-10-11 09:29:26,469 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-95
+2026-10-11 09:29:26,470 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-95
+2026-10-11 09:29:26,472 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-45
+2026-10-11 09:29:26,472 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-45
+2026-10-11 09:29:26,473 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-63
+2026-10-11 09:29:26,473 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-63
+2026-10-11 09:29:26,475 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-157
+2026-10-11 09:29:26,475 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-157
+2026-10-11 09:29:26,479 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-99
+2026-10-11 09:29:26,479 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-99
+2026-10-11 09:29:26,481 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-178
+2026-10-11 09:29:26,481 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-178
+2026-10-11 09:29:26,482 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-66
+2026-10-11 09:29:26,482 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-66
+2026-10-11 09:29:26,483 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-119
+2026-10-11 09:29:26,483 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-119
+2026-10-11 09:29:26,487 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-133
+2026-10-11 09:29:26,487 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-133
+2026-10-11 09:29:26,489 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-171
+2026-10-11 09:29:26,489 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-171
+2026-10-11 09:29:26,490 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-73
+2026-10-11 09:29:26,490 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-73
+2026-10-11 09:29:26,491 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-186
+2026-10-11 09:29:26,491 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-186
+2026-10-11 09:29:26,496 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-108
+2026-10-11 09:29:26,496 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-108
+2026-10-11 09:29:26,497 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-126
+2026-10-11 09:29:26,497 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-126
+2026-10-11 09:29:26,499 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-113
+2026-10-11 09:29:26,499 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-113
+2026-10-11 09:29:26,500 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-77
+2026-10-11 09:29:26,500 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-77
+2026-10-11 09:29:26,504 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-164
+2026-10-11 09:29:26,504 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-164
+2026-10-11 09:29:26,505 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-49
+2026-10-11 09:29:26,506 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-49
+2026-10-11 09:29:26,507 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-151
+2026-10-11 09:29:26,507 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-151
+2026-10-11 09:29:26,508 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-69
+2026-10-11 09:29:26,508 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-69
+2026-10-11 09:29:26,513 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-84
+2026-10-11 09:29:26,513 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-84
+2026-10-11 09:29:26,514 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-58
+2026-10-11 09:29:26,514 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-58
+2026-10-11 09:29:26,515 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-194
+2026-10-11 09:29:26,515 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-194
+2026-10-11 09:29:26,517 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-13
+2026-10-11 09:29:26,517 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-13
+2026-10-11 09:29:26,522 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-145
+2026-10-11 09:29:26,522 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-145
+2026-10-11 09:29:26,523 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-47
+2026-10-11 09:29:26,523 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-47
+2026-10-11 09:29:26,524 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-104
+2026-10-11 09:29:26,524 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-104
+2026-10-11 09:29:26,525 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-179
+2026-10-11 09:29:26,525 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-179
+2026-10-11 09:29:26,531 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-127
+2026-10-11 09:29:26,531 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-127
+2026-10-11 09:29:26,532 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-19
+2026-10-11 09:29:26,532 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-19
+2026-10-11 09:29:26,533 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-38
+2026-10-11 09:29:26,533 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-38
+2026-10-11 09:29:26,534 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-139
+2026-10-11 09:29:26,534 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-139
+2026-10-11 09:29:26,539 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-2
+2026-10-11 09:29:26,539 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-2
+2026-10-11 09:29:26,540 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-158
+2026-10-11 09:29:26,541 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-158
+2026-10-11 09:29:26,542 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-32
+2026-10-11 09:29:26,542 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-32
+2026-10-11 09:29:26,543 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-120
+2026-10-11 09:29:26,543 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-120
+2026-10-11 09:29:26,548 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-109
+2026-10-11 09:29:26,548 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-109
+2026-10-11 09:29:26,549 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-25
+2026-10-11 09:29:26,549 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-25
+2026-10-11 09:29:26,550 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-11
+2026-10-11 09:29:26,550 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-11
+2026-10-11 09:29:26,552 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-165
+2026-10-11 09:29:26,552 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-165
+2026-10-11 09:29:26,556 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-74
+2026-10-11 09:29:26,557 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-74
+2026-10-11 09:29:26,558 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-195
+2026-10-11 09:29:26,558 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-195
+2026-10-11 09:29:26,559 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-26
+2026-10-11 09:29:26,559 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-26
+2026-10-11 09:29:26,560 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-40
+2026-10-11 09:29:26,560 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-40
+2026-10-11 09:29:26,566 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-56
+2026-10-11 09:29:26,566 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-56
+2026-10-11 09:29:26,567 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-172
+2026-10-11 09:29:26,567 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-172
+2026-10-11 09:29:26,568 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-187
+2026-10-11 09:29:26,568 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-187
+2026-10-11 09:29:26,570 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-35
+2026-10-11 09:29:26,570 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-35
+2026-10-11 09:29:26,575 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-114
+2026-10-11 09:29:26,575 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-114
+2026-10-11 09:29:26,576 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-146
+2026-10-11 09:29:26,576 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-146
+2026-10-11 09:29:26,577 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-81
+2026-10-11 09:29:26,577 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-81
+2026-10-11 09:29:26,578 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-152
+2026-10-11 09:29:26,578 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-152
+2026-10-11 09:29:26,583 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-134
+2026-10-11 09:29:26,583 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-134
+2026-10-11 09:29:26,584 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-96
+2026-10-11 09:29:26,584 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-96
+2026-10-11 09:29:26,586 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-20
+2026-10-11 09:29:26,586 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-20
+2026-10-11 09:29:26,587 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-159
+2026-10-11 09:29:26,587 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-159
+2026-10-11 09:29:26,592 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-180
+2026-10-11 09:29:26,592 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-180
+2026-10-11 09:29:26,593 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-140
+2026-10-11 09:29:26,593 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-140
+2026-10-11 09:29:26,594 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-14
+2026-10-11 09:29:26,594 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-14
+2026-10-11 09:29:26,595 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-128
+2026-10-11 09:29:26,596 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-128
+2026-10-11 09:29:26,600 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-92
+2026-10-11 09:29:26,600 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-92
+2026-10-11 09:29:26,601 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-64
+2026-10-11 09:29:26,601 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-64
+2026-10-11 09:29:26,603 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-100
+2026-10-11 09:29:26,603 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-100
+2026-10-11 09:29:26,604 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-61
+2026-10-11 09:29:26,604 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-61
+2026-10-11 09:29:26,609 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-188
+2026-10-11 09:29:26,609 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-188
+2026-10-11 09:29:26,610 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-88
+2026-10-11 09:29:26,610 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-88
+2026-10-11 09:29:26,612 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-10
+2026-10-11 09:29:26,612 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-10
+2026-10-11 09:29:26,613 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-85
+2026-10-11 09:29:26,613 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-85
+2026-10-11 09:29:26,617 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-173
+2026-10-11 09:29:26,618 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-173
+2026-10-11 09:29:26,619 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-67
+2026-10-11 09:29:26,619 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-67
+2026-10-11 09:29:26,620 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-121
+2026-10-11 09:29:26,620 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-121
+2026-10-11 09:29:26,621 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-196
+2026-10-11 09:29:26,621 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-196
+2026-10-11 09:29:26,626 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-115
+2026-10-11 09:29:26,626 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-115
+2026-10-11 09:29:26,627 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-70
+2026-10-11 09:29:26,627 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-70
+2026-10-11 09:29:26,629 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-78
+2026-10-11 09:29:26,629 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-78
+2026-10-11 09:29:26,630 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-31
+2026-10-11 09:29:26,630 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-31
+2026-10-11 09:29:26,635 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-110
+2026-10-11 09:29:26,635 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-110
+2026-10-11 09:29:26,636 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-105
+2026-10-11 09:29:26,637 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-105
+2026-10-11 09:29:26,638 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-153
+2026-10-11 09:29:26,638 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-153
+2026-10-11 09:29:26,639 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-166
+2026-10-11 09:29:26,639 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-166
+2026-10-11 09:29:26,646 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-7
+2026-10-11 09:29:26,646 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-7
+2026-10-11 09:29:26,647 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-22
+2026-10-11 09:29:26,647 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-22
+2026-10-11 09:29:26,648 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-24
+2026-10-11 09:29:26,648 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-24
+2026-10-11 09:29:26,649 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-181
+2026-10-11 09:29:26,649 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-181
+2026-10-11 09:29:26,655 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-147
+2026-10-11 09:29:26,655 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-147
+2026-10-11 09:29:26,656 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-189
+2026-10-11 09:29:26,656 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-189
+2026-10-11 09:29:26,657 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-135
+2026-10-11 09:29:26,657 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-135
+2026-10-11 09:29:26,659 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-54
+2026-10-11 09:29:26,659 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-54
+2026-10-11 09:29:26,664 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-52
+2026-10-11 09:29:26,664 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-52
+2026-10-11 09:29:26,665 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-197
+2026-10-11 09:29:26,665 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-197
+2026-10-11 09:29:26,667 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-42
+2026-10-11 09:29:26,667 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-42
+2026-10-11 09:29:26,668 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-141
+2026-10-11 09:29:26,668 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-141
+2026-10-11 09:29:26,673 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-174
+2026-10-11 09:29:26,674 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-174
+2026-10-11 09:29:26,675 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-21
+2026-10-11 09:29:26,675 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-21
+2026-10-11 09:29:26,676 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-160
+2026-10-11 09:29:26,676 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-160
+2026-10-11 09:29:26,677 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-89
+2026-10-11 09:29:26,677 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-89
+2026-10-11 09:29:26,682 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-46
+2026-10-11 09:29:26,682 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-46
+2026-10-11 09:29:26,684 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-122
+2026-10-11 09:29:26,684 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-122
+2026-10-11 09:29:26,685 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-101
+2026-10-11 09:29:26,685 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-101
+2026-10-11 09:29:26,686 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-23
+2026-10-11 09:29:26,686 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-23
+2026-10-11 09:29:26,691 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-44
+2026-10-11 09:29:26,691 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-44
+2026-10-11 09:29:26,692 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-129
+2026-10-11 09:29:26,692 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-129
+2026-10-11 09:29:26,693 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-59
+2026-10-11 09:29:26,694 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-59
+2026-10-11 09:29:26,695 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-167
+2026-10-11 09:29:26,695 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-167
+2026-10-11 09:29:26,700 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-75
+2026-10-11 09:29:26,700 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-75
+2026-10-11 09:29:26,702 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-50
+2026-10-11 09:29:26,702 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-50
+2026-10-11 09:29:26,703 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-182
+2026-10-11 09:29:26,703 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-182
+2026-10-11 09:29:26,704 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-82
+2026-10-11 09:29:26,704 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-82
+2026-10-11 09:29:26,708 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-97
+2026-10-11 09:29:26,708 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-97
+2026-10-11 09:29:26,710 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-93
+2026-10-11 09:29:26,710 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-93
+2026-10-11 09:29:26,711 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-16
+2026-10-11 09:29:26,711 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-16
+2026-10-11 09:29:26,712 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-116
+2026-10-11 09:29:26,712 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-116
+2026-10-11 09:29:26,717 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-48
+2026-10-11 09:29:26,717 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-48
+2026-10-11 09:29:26,718 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-154
+2026-10-11 09:29:26,718 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-154
+2026-10-11 09:29:26,719 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-37
+2026-10-11 09:29:26,720 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-37
+2026-10-11 09:29:26,721 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-136
+2026-10-11 09:29:26,721 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-136
+2026-10-11 09:29:26,725 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-198
+2026-10-11 09:29:26,725 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-198
+2026-10-11 09:29:26,727 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-190
+2026-10-11 09:29:26,727 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-190
+2026-10-11 09:29:26,728 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-111
+2026-10-11 09:29:26,728 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-111
+2026-10-11 09:29:26,729 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-30
+2026-10-11 09:29:26,730 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-30
+2026-10-11 09:29:26,734 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-161
+2026-10-11 09:29:26,734 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-161
+2026-10-11 09:29:26,736 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-175
+2026-10-11 09:29:26,736 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-175
+2026-10-11 09:29:26,738 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-34
+2026-10-11 09:29:26,738 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-34
+2026-10-11 09:29:26,739 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-148
+2026-10-11 09:29:26,739 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-148
+2026-10-11 09:29:26,743 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-130
+2026-10-11 09:29:26,743 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-130
+2026-10-11 09:29:26,744 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-86
+2026-10-11 09:29:26,744 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-86
+2026-10-11 09:29:26,746 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-62
+2026-10-11 09:29:26,746 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-62
+2026-10-11 09:29:26,748 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-123
+2026-10-11 09:29:26,748 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-123
+2026-10-11 09:29:26,752 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-168
+2026-10-11 09:29:26,752 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-168
+2026-10-11 09:29:26,753 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-106
+2026-10-11 09:29:26,753 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-106
+2026-10-11 09:29:26,755 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-71
+2026-10-11 09:29:26,755 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-71
+2026-10-11 09:29:26,756 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-142
+2026-10-11 09:29:26,756 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-142
+2026-10-11 09:29:26,760 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-4
+2026-10-11 09:29:26,760 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-4
+2026-10-11 09:29:26,761 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-6
+2026-10-11 09:29:26,761 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-6
+2026-10-11 09:29:26,763 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-65
+2026-10-11 09:29:26,763 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-65
+2026-10-11 09:29:26,764 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-79
+2026-10-11 09:29:26,765 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-79
+2026-10-11 09:29:26,768 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-183
+2026-10-11 09:29:26,768 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-183
+2026-10-11 09:29:26,770 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-102
+2026-10-11 09:29:26,770 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-102
+2026-10-11 09:29:26,772 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-29
+2026-10-11 09:29:26,772 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-29
+2026-10-11 09:29:26,773 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-57
+2026-10-11 09:29:26,773 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-57
+2026-10-11 09:29:26,776 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-117
+2026-10-11 09:29:26,777 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-117
+2026-10-11 09:29:26,778 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-199
+2026-10-11 09:29:26,778 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-199
+2026-10-11 09:29:26,781 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-155
+2026-10-11 09:29:26,781 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-155
+2026-10-11 09:29:26,782 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-17
+2026-10-11 09:29:26,782 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-17
+2026-10-11 09:29:26,785 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-9
+2026-10-11 09:29:26,785 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-9
+2026-10-11 09:29:26,787 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-191
+2026-10-11 09:29:26,787 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-191
+2026-10-11 09:29:26,789 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-68
+2026-10-11 09:29:26,789 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-68
+2026-10-11 09:29:26,790 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-90
+2026-10-11 09:29:26,790 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-90
+2026-10-11 09:29:26,794 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-131
+2026-10-11 09:29:26,794 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-131
+2026-10-11 09:29:26,795 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-137
+2026-10-11 09:29:26,795 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-137
+2026-10-11 09:29:26,797 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-162
+2026-10-11 09:29:26,797 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-162
+2026-10-11 09:29:26,798 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-124
+2026-10-11 09:29:26,798 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-124
+2026-10-11 09:29:26,802 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-176
+2026-10-11 09:29:26,802 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-176
+2026-10-11 09:29:26,803 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-5
+2026-10-11 09:29:26,803 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-5
+2026-10-11 09:29:26,805 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-98
+2026-10-11 09:29:26,805 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-98
+2026-10-11 09:29:26,807 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-169
+2026-10-11 09:29:26,807 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-169
+2026-10-11 09:29:26,810 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-149
+2026-10-11 09:29:26,810 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-149
+2026-10-11 09:29:26,812 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-143
+2026-10-11 09:29:26,812 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-143
+2026-10-11 09:29:26,814 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-55
+2026-10-11 09:29:26,814 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-55
+2026-10-11 09:29:26,815 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-94
+2026-10-11 09:29:26,815 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-94
+2026-10-11 09:29:26,818 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-184
+2026-10-11 09:29:26,818 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-184
+2026-10-11 09:29:26,820 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-1
+2026-10-11 09:29:26,820 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-1
+2026-10-11 09:29:26,822 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-39
+2026-10-11 09:29:26,822 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-39
+2026-10-11 09:29:26,823 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-33
+2026-10-11 09:29:26,823 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-33
+2026-10-11 09:29:26,827 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-76
+2026-10-11 09:29:26,827 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-76
+2026-10-11 09:29:26,829 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-83
+2026-10-11 09:29:26,829 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-83
+2026-10-11 09:29:26,830 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-41
+2026-10-11 09:29:26,831 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-41
+2026-10-11 09:29:26,832 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-72
+2026-10-11 09:29:26,832 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-72
+2026-10-11 09:29:26,836 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-200
+2026-10-11 09:29:26,836 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-200
+2026-10-11 09:29:26,837 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-112
+2026-10-11 09:29:26,837 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-112
+2026-10-11 09:29:26,839 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-107
+2026-10-11 09:29:26,839 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-107
+2026-10-11 09:29:26,841 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-192
+2026-10-11 09:29:26,841 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-192
+2026-10-11 09:29:26,845 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-36
+2026-10-11 09:29:26,845 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-36
+2026-10-11 09:29:26,846 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-87
+2026-10-11 09:29:26,846 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-87
+2026-10-11 09:29:26,848 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-118
+2026-10-11 09:29:26,848 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-118
+2026-10-11 09:29:26,849 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-132
+2026-10-11 09:29:26,849 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-132
+2026-10-11 09:29:26,853 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-163
+2026-10-11 09:29:26,853 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-163
+2026-10-11 09:29:26,854 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-125
+2026-10-11 09:29:26,854 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-125
+2026-10-11 09:29:26,856 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-150
+2026-10-11 09:29:26,856 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-150
+2026-10-11 09:29:26,857 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-156
+2026-10-11 09:29:26,858 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-156
+2026-10-11 09:29:26,861 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-138
+2026-10-11 09:29:26,861 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-138
+2026-10-11 09:29:26,862 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-177
+2026-10-11 09:29:26,862 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-177
+2026-10-11 09:29:26,864 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-144
+2026-10-11 09:29:26,864 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-144
+2026-10-11 09:29:26,866 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-185
+2026-10-11 09:29:26,866 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-185
+2026-10-11 09:29:26,869 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-193
+2026-10-11 09:29:26,869 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-193
+2026-10-11 09:29:26,870 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: S2 1-170
+2026-10-11 09:29:26,870 INFO o.a.j.t.JMeterThread: Thread finished: S2 1-170
+2026-10-11 09:29:26,871 INFO o.a.j.e.StandardJMeterEngine: Notifying test listeners of end of test
+2026-10-11 09:29:26,871 INFO o.a.j.s.FileServer: Close: /tests/data/available_menu_items.csv
+2026-10-11 09:29:26,873 INFO o.a.j.r.Summariser: summary +  12202 in 00:00:27 =  454.1/s Avg:   425 Min:   405 Max:   506 Err:     0 (0.00%) Active: 0 Started: 200 Finished: 200
+2026-10-11 09:29:26,873 INFO o.a.j.r.Summariser: summary =  54537 in 00:02:01 =  450.1/s Avg:   409 Min:    10 Max:   543 Err:     0 (0.00%)
