@@ -165,12 +165,16 @@ Parametry sterujące konfiguracją infrastruktury:
 
 > Szczegółowy opis schematu relacyjnego, relacji 1:N / N:M, diagramu ERD oraz procedur seedera znajduje się w dedykowanym dokumencie [`DATABASE.md`](file:///home/user/projekty/badanie/DATABASE.md).
 
+> ### 📌 Zakres Danych: Artykuł Naukowy vs Praca Magisterska
+> - **W artykule naukowym:** Wykorzystano **8 tabel** o wolumenie **401 895 rekordów** (~402 tys.). Tabela `reservations` oraz endpoint EP9 zostały wyłączone z publikacji, aby utrzymać zwięzłość i skupić się na ogonie opóźnień $p_{95}$ bez zakłóceń zaawansowanymi blokadami silnika bazy.
+> - **W pełnej pracy magisterskiej:** Wykorzystano pełny model **9 tabel** o wolumenie **501 895 rekordów** (wraz ze 100 000 wierszy w `reservations` i indeksem `EXCLUDE USING gist`), obejmujący pełen zestaw 10 endpointów (w tym relacje N:M w EP5 oraz rezerwacje w EP9).
+
 ### Generator danych (`RestaurantSeeder.php`)
 - **Ziarno generatora liczb pseudolosowych:** Ustalony seed `mt_srand(20260101)` i `fake()->seed(20260101)`.
 - **Rozmiary tabel:**
   - Tabele słownikowe: `users` (200), `tables` (200), `ingredients` (200), `dishes` (500), `menu_items` (500).
   - Tabela asocjacyjna: `dish_ingredients` (2 000 wierszy, relacja N:M).
-  - Tabele transakcyjne: `orders` (100 000 wierszy), `order_items` (dokładnie **299 695** wierszy; liczba pozycji na zamówienie wyznaczana z rozkładu jednostajnego `mt_rand(1, 5)`).
+  - Tabele transakcyjne: `orders` (100 000 wierszy), `order_items` (dokładnie **299 695** wierszy; liczba pozycji na zamówienie wyznaczana z rozkładu jednostajnego `mt_rand(1, 5)`), `reservations` (100 000 wierszy, zakres pracy mgr).
 - **Deterministyczna agregacja (EP6):** Zapytanie dashboardu agreguje transakcje z ostatnich 30 dni przed znacznikiem `BENCH_NOW` (dokładnie 33 469 zamówień), co zapewnia bajtowo identyczne odpowiedzi w każdym powtórzeniu.
 
 ### Procedura tworzenia i resetu baz danych

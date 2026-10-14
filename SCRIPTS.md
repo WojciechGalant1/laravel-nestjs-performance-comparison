@@ -243,7 +243,7 @@ Weryfikacja determinizmu operacji modyfikacji danych (mutacji bazy) oraz ścisł
   ./scripts/golden-write-check.sh <laravel | nestjs>
   ```
 - **Działanie:**
-  - Wysyła deterministyczne żądania HTTP dla endpointów mutujących (EP7, EP8, EP9).
+  - Wysyła deterministyczne żądania HTTP dla endpointów mutujących: EP7 (artykuł + praca mgr), EP8 (artykuł + praca mgr) oraz EP9 (wyłącznie praca mgr).
   - Wykonuje zrzut wstawionych i zaktualizowanych rekordów bezpośrednio z bazy danych w formacie JSON (z pominięciem generowanych kluczy i znaczników czasu `created_at`/`updated_at`).
   - Pozwala na bezpośrednie porównanie zgodności struktur danych obu frameworków standardowym poleceniem `diff`.
 
