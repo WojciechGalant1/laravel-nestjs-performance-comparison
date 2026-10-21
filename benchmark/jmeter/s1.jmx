@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  S1 - baseline / simple CRUD (H1): EP1, EP2, EP8.
+  S1 - baseline / simple CRUD (H1): EP1, EP2, EP5.
 
   Properties (passed with -J by scripts/run-scenario.sh; the defaults let the plan
   run unchanged in the JMeter GUI against the Laravel stack on localhost:8080):
     host, port        target nginx (in the runner: laravel-nginx / nestjs-nginx, port 80)
-    endpoint          EP1 | EP8 run one endpoint in isolation
+    endpoint          EP1 | EP5 run one endpoint in isolation
                       PING is a diagnostic (GET /api/ping, no database) and is not part of H1
     users, rampup, duration   closed workload: users threads, no think time, duration in seconds
     ep1.pages, ep2.pages, orders.max   ranges from jmeter/data/ranges.properties (-q)
@@ -202,7 +202,7 @@
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP8">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP5">
             <stringProp name="HTTPSampler.path">/api/orders/${__Random(1,${__P(orders.max,100000)})}/status</stringProp>
             <stringProp name="HTTPSampler.method">PATCH</stringProp>
             <boolProp name="HTTPSampler.follow_redirects">false</boolProp>

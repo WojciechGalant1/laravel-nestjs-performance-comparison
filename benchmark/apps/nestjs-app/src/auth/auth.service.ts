@@ -12,7 +12,7 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  // EP10: authenticate and issue an HS256 JWT with { sub, role } claims.
+  // EP0: authenticate and issue an HS256 JWT with { sub, role } claims.
   // bcryptjs.compare verifies Laravel's $2y$ bcrypt hashes directly.
   async login(dto: LoginDto): Promise<{
     access_token: string;

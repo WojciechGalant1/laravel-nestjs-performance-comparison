@@ -45,7 +45,7 @@ export class OrdersController {
     return this.ordersService.createOrder(dto, user);
   }
 
-  // EP8: PATCH /api/orders/:id/status
+  // EP5: PATCH /api/orders/:id/status
   @Patch(':id/status')
   @UseGuards(BindOrderGuard)
   updateStatus(

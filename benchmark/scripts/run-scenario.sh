@@ -19,7 +19,7 @@
 # Environment (defaults follow the methodology):
 #   ENDPOINTS / USERS override the scenario defaults
 #   REPS=10 WARMUP=120 DURATION=180 RAMPUP=10
-#   S1 defaults: ENDPOINTS="EP1 EP8" USERS="1 2 4 10"
+#   S1 defaults: ENDPOINTS="EP1 EP5" USERS="1 2 4 10"
 #   S2 defaults: ENDPOINTS="EP3 EP7" USERS="200 500 1000"
 #   S3 defaults: ENDPOINTS="EP1 EP2 EP4 EP6" USERS="1 2 4 10"
 #   DB_POOL_SIZE=1   NestJS control run; results go to results/s2-pool1/
@@ -45,9 +45,9 @@ case "$target" in
 esac
 
 case "$scenario" in
-    s1) default_endpoints="EP1 EP8"; extra_endpoints="EP2 PING"; default_users="1 2 4 10"; default_warmup=60; default_duration=60 ;;
+    s1) default_endpoints="EP1 EP5"; extra_endpoints="EP2 PING"; default_users="1 2 4 10"; default_warmup=60; default_duration=60 ;;
     s2) default_endpoints="EP3 EP7"; extra_endpoints=""; default_users="200 500 1000"; default_warmup=120; default_duration=120 ;;
-    s3) default_endpoints="EP1 EP2 EP4 EP6"; extra_endpoints="EP5"; default_users="1 2 4 10"; default_warmup=60; default_duration=60 ;;
+    s3) default_endpoints="EP1 EP2 EP4 EP6"; extra_endpoints="EP8"; default_users="1 2 4 10"; default_warmup=60; default_duration=60 ;;
     *) echo "Unknown scenario: ${scenario} (no jmeter/${scenario}.jmx defaults)" >&2; exit 1 ;;
 esac
 

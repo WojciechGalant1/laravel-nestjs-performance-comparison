@@ -49,26 +49,26 @@ Aplikacja działa w kontenerze Docker opartym o obraz `php:8.4-fpm-bookworm` z n
 
 ## 3. Szczegółowy Opis Endpointów
 
-Wszystkie endpointy biznesowe wymagają autoryzacji nagłówkiem `Authorization: Bearer <token>` (z wyjątkiem `EP10`).
+Wszystkie endpointy biznesowe wymagają autoryzacji nagłówkiem `Authorization: Bearer <token>` (z wyjątkiem `EP0`).
 
 > ### 📌 Zakres Badania: Artykuł Naukowy vs Praca Magisterska
-> - **Artykuł naukowy:** Skupia się na wąskim zestawie kluczowych operacji (S1: EP1, EP8; S2: EP3, EP7; S3: EP1, EP2; uzupełniająco: EP4, EP6; pre-test: EP10, `/api/ping`).
-> - **Praca magisterska (pełne repozytorium):** Obejmuje **wszystkie 10 endpointów**, włączając relacje wiele-do-wielu (EP5) oraz transakcje z indeksem wykluczającym GiST (EP9).
+> - **Artykuł naukowy:** Skupia się na wąskim zestawie kluczowych operacji (S1: EP1, EP5; S2: EP3, EP7; S3: EP1, EP2; uzupełniająco: EP4, EP6; pre-test: EP0, `/api/ping`).
+> - **Praca magisterska (pełne repozytorium):** Obejmuje **wszystkie 10 endpointów**, włączając relacje wiele-do-wielu (EP8) oraz transakcje z indeksem wykluczającym GiST (EP9).
 
 ### Tabela Podsumowująca Endpointy
 
 | ID | Metoda i Ścieżka | Rola / Scenariusz | Zakres Badania | Złożoność Relacji / Danych | Kontroler i Akcja |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **EP10** | `POST /api/auth/login` | Setup (pre-test) | **Artykuł + Praca mgr** | Uwierzytelnienie, wydanie JWT HS256 | `AuthController@login` |
+| **EP0** | `POST /api/auth/login` | Setup (pre-test) | **Artykuł + Praca mgr** | Uwierzytelnienie, wydanie JWT HS256 | `AuthController@login` |
 | **PING** | `GET /api/ping` | Diagnostyka bazowa | **Artykuł + Praca mgr** | 0 DB (wyłącznie weryfikacja JWT w pamięci) | `PingController` |
 | **EP1** | `GET /api/tables` | S1 (werdykt), S3 (baza) | **Artykuł + Praca mgr** | 0 relacji (odczyt pojedynczej tabeli słownikowej) | `TableController@index` |
 | **EP2** | `GET /api/menu-items` | S3 (główny werdykt) | **Artykuł + Praca mgr** | 1 relacja eager load (szerokość kolekcji: 40 encji) | `MenuItemController@index` |
 | **EP3** | `GET /api/orders` | S2 (główny werdykt) | **Artykuł + Praca mgr** | 2 relacje eager load (`table`, `waiter`) | `OrderController@index` |
 | **EP4** | `GET /api/orders/{id}` | S3 (obserwacja) | **Artykuł + Praca mgr** | 3 poziomy zagłębienia eager load (~10 encji) | `OrderController@show` |
-| **EP5** | `GET /api/dishes/{dish}/ingredients` | Analiza relacji N:M | **Wyłącznie Praca mgr** | Relacja N:M przez tabelę asocjacyjną (pivot) | `DishController@ingredients` |
+| **EP5** | `PATCH /api/orders/{id}/status` | S1 (werdykt) | **Artykuł + Praca mgr** | Prosty in-place `UPDATE` pojedynczego rekordu | `OrderController@updateStatus` |
 | **EP6** | `GET /api/dashboard/summary` | S3 (obserwacja) | **Artykuł + Praca mgr** | 3 JOIN + `GROUP BY` + agregacje SQL (30 dni) | `DashboardController@summary` |
 | **EP7** | `POST /api/orders` | S2 (obserwacja zapisu) | **Artykuł + Praca mgr** | Zapis transakcyjny (walidacja + 2 tabele) | `OrderController@store` |
-| **EP8** | `PATCH /api/orders/{id}/status` | S1 (werdykt) | **Artykuł + Praca mgr** | Prosty in-place `UPDATE` pojedynczego rekordu | `OrderController@updateStatus` |
+| **EP8** | `GET /api/dishes/{dish}/ingredients` | Analiza relacji N:M | **Wyłącznie Praca mgr** | Relacja N:M przez tabelę asocjacyjną (pivot) | `DishController@ingredients` |
 | **EP9** | `POST /api/reservations` | Indeks GiST / blokady | **Wyłącznie Praca mgr** | Zapis z walidacją kolizji terminów w bazie | `ReservationController@store` |
 
 ---

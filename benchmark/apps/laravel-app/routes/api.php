@@ -10,7 +10,7 @@ use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\TableController;
 use Illuminate\Support\Facades\Route;
 
-// EP10: authentication
+// EP0: authentication
 Route::post('auth/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:api', 'count.queries'])->group(function () {
@@ -29,8 +29,8 @@ Route::middleware(['auth:api', 'count.queries'])->group(function () {
     // EP4: 3-level nested eager load
     Route::get('orders/{order}', [OrderController::class, 'show']);
 
-    // EP5: N:M via pivot
-    Route::get('dishes/{dish}/ingredients', [DishController::class, 'ingredients']);
+    // EP5: simple UPDATE
+    Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
 
     // EP6: 3 JOIN + aggregation
     Route::get('dashboard/summary', [DashboardController::class, 'summary']);
@@ -38,8 +38,8 @@ Route::middleware(['auth:api', 'count.queries'])->group(function () {
     // EP7: transactional insert
     Route::post('orders', [OrderController::class, 'store']);
 
-    // EP8: simple UPDATE
-    Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
+    // EP8: N:M via pivot
+    Route::get('dishes/{dish}/ingredients', [DishController::class, 'ingredients']);
 
     // EP9: insert + DB exclusion constraint
     Route::post('reservations', [ReservationController::class, 'store']);

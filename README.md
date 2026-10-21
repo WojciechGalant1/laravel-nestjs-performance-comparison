@@ -195,7 +195,7 @@ Parametry sterujące konfiguracją infrastruktury:
 
 ### Plany Apache JMeter (`.jmx`)
 - **Tryb obciążenia:** Pętla zamknięta (**closed workload**) bez opóźnień użytkownika (*zero think time*) z połączeniami HTTP persistent keep-alive.
-- **Grupa `setUp`:** Pojedynczy wątek przed startem fazy pomiarowej wykonuje zapytanie uwierzytelniające (`POST /api/auth/login`, EP10) i pobiera token JWT współdzielony przez wszystkie wątki wirtualne.
+- **Grupa `setUp`:** Pojedynczy wątek przed startem fazy pomiarowej wykonuje zapytanie uwierzytelniające (`POST /api/auth/login`, EP0) i pobiera token JWT współdzielony przez wszystkie wątki wirtualne.
 - **Pliki parametrów:** `scripts/jmeter-data.sh` generuje `jmeter/data/ranges.properties` (maksymalne zakresy stron zapobiegające błędom 404) oraz `available_menu_items.csv`.
 
 ### Algorytm orkiestracji (`scripts/run-scenario.sh`)

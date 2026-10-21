@@ -37,5 +37,5 @@ request POST /api/reservations \
 echo "framework=${framework}"
 echo "EP7.order=$(psql -c "SELECT json_build_object('table_id', table_id, 'user_id', user_id, 'total_price', total_price::text, 'status', status::text) FROM orders ORDER BY id DESC LIMIT 1;")"
 echo "EP7.item=$(psql -c "SELECT json_build_object('menu_item_id', menu_item_id, 'quantity', quantity, 'unit_price', unit_price::text, 'notes', notes, 'status', status::text) FROM order_items ORDER BY id DESC LIMIT 1;")"
-echo "EP8.order=$(psql -c "SELECT json_build_object('table_id', table_id, 'user_id', user_id, 'total_price', total_price::text, 'status', status::text) FROM orders WHERE id = 1;")"
+echo "EP5.order=$(psql -c "SELECT json_build_object('table_id', table_id, 'user_id', user_id, 'total_price', total_price::text, 'status', status::text) FROM orders WHERE id = 1;")"
 echo "EP9.reservation=$(psql -c "SELECT json_build_object('table_id', table_id, 'customer_name', customer_name, 'phone_number', phone_number, 'reservation_date', reservation_date, 'reservation_time', reservation_time, 'party_size', party_size, 'duration_minutes', duration_minutes, 'status', status::text, 'notes', notes) FROM reservations WHERE customer_name = 'Golden Guest' ORDER BY id DESC LIMIT 1;")"

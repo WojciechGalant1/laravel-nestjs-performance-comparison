@@ -108,7 +108,7 @@ export class OrdersService {
     });
   }
 
-  // EP8: update an order's status (simple UPDATE). The order is already bound.
+  // EP5: update an order's status (simple UPDATE). The order is already bound.
   async updateStatus(user: AuthUser, order: Order, status: OrderStatus): Promise<Order> {
     this.authorizeOwnership(user, order);
 

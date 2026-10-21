@@ -15,7 +15,7 @@ Baza danych modeluje realistyczny system zarządzania restauracją (POS / Restau
 > | **Liczba tabel** | **8 tabel** (słowniki, pivot, `orders`, `order_items`) | **9 tabel** (+ tabela `reservations`) |
 > | **Liczba rekordów** | **401 895 wierszy** (~402 tys.) | **501 895 wierszy** (+100 000 wierszy w `reservations`) |
 > | **Typy indeksów** | Standardowe indeksy **B-Tree** (klucze obce, unikalne i pola zapytań) | B-Tree + **GiST** (rozszerzenie `btree_gist`, ograniczenie `EXCLUDE USING gist`) |
-> | **Obsługiwane endpointy** | **EP1, EP2, EP3, EP7, EP8** (oraz pomocniczo EP4, EP6, login EP10) | **Wszystkie endpointy EP1–EP10** (w tym EP5 N:M pivot oraz EP9 rezerwacje) |
+> | **Obsługiwane endpointy** | **EP1, EP2, EP3, EP5, EP7** (oraz pomocniczo EP4, EP6, login EP0) | **Wszystkie endpointy EP0–EP9** (w tym EP8 N:M pivot oraz EP9 rezerwacje) |
 > | **Uzasadnienie metodyczne** | Rygor objętościowy publikacji (8 stron) oraz izolacja ogona opóźnień $p_{95}$ od zaawansowanych blokad czasowych w bazie. | Pełna ewaluacja architektury: relacje N:M, transakcje ACID, blokady wierszy oraz typy przedziałowe (`tsrange`). |
 
 ---
@@ -359,16 +359,16 @@ TEMPLATE laravel_app                            TEMPLATE laravel_app
 
 | Endpoint | Metoda | Wykorzystywane Tabele | Typ Operacji SQL | Rola w Badaniu | Zakres Badania |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| **EP0** | `POST /api/auth/login` | `users` | `SELECT ... WHERE email = ?` | Pre-test setup (wydanie JWT) | **Artykuł + Praca mgr** |
 | **EP1** | `GET /api/tables` | `tables` | Prosty `SELECT ... LIMIT 20` | S1 (werdykt), S3 (baza odniesienia) | **Artykuł + Praca mgr** |
 | **EP2** | `GET /api/menu-items` | `menu_items`, `dishes` | Eager load 1 relacji (`SELECT IN`) | S3 (główny werdykt narzutu szerokości) | **Artykuł + Praca mgr** |
 | **EP3** | `GET /api/orders` | `orders`, `tables`, `users` | Eager load 2 relacji z filtrem `user_id` | S2 (główny werdykt skalowalności) | **Artykuł + Praca mgr** |
 | **EP4** | `GET /api/orders/{id}` | `orders`, `tables`, `users`, `order_items`, `menu_items`, `dishes` | 3-poziomowy nested eager loading | S3 (obserwacja głębokości drzewa) | **Artykuł + Praca mgr** |
-| **EP5** | `GET /api/dishes/{id}/ingredients` | `dishes`, `dish_ingredients`, `ingredients` | Relacja N:M z atrybutami pivota | Analiza relacji wiele-do-wielu | **Wyłącznie Praca mgr** |
+| **EP5** | `PATCH /api/orders/{id}/status` | `orders` | Prosty `UPDATE status = 'paid'` | S1 (werdykt zapisu bazowego) | **Artykuł + Praca mgr** |
 | **EP6** | `GET /api/dashboard/summary` | `order_items`, `orders`, `menu_items`, `dishes` | 3 JOIN + `GROUP BY` + `COUNT`/`SUM`/`AVG` | S3 (obserwacja wąskiego gardła w SQL) | **Artykuł + Praca mgr** |
 | **EP7** | `POST /api/orders` | `tables`, `menu_items`, `orders`, `order_items` | Transakcyjny `INSERT` (walidacja + 2 tabele) | S2 (obserwacja zapisu pod obciążeniem) | **Artykuł + Praca mgr** |
-| **EP8** | `PATCH /api/orders/{id}/status` | `orders` | Prosty `UPDATE status = 'paid'` | S1 (werdykt zapisu bazowego) | **Artykuł + Praca mgr** |
+| **EP8** | `GET /api/dishes/{id}/ingredients` | `dishes`, `dish_ingredients`, `ingredients` | Relacja N:M z atrybutami pivota | Analiza relacji wiele-do-wielu | **Wyłącznie Praca mgr** |
 | **EP9** | `POST /api/reservations` | `tables`, `reservations` | `INSERT` z walidacją `EXCLUDE USING gist` | Zapis ze złożonym indeksem GiST | **Wyłącznie Praca mgr** |
-| **EP10**| `POST /api/auth/login` | `users` | `SELECT ... WHERE email = ?` | Pre-test setup (wydanie JWT) | **Artykuł + Praca mgr** |
 | **PING**| `GET /api/ping` | *Brak (0 DB)* | Weryfikacja podpisu JWT w pamięci | Diagnostyka izolowanego narzutu HTTP/JWT | **Artykuł + Praca mgr** |
 
 ---

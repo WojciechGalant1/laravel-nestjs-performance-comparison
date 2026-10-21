@@ -62,10 +62,10 @@ for spec in \
     "EP1 /api/tables?page=1" \
     "EP3 /api/orders?page=1" \
     "EP4 /api/orders/1" \
-    "EP5 /api/dishes/1/ingredients" \
+    "EP5 /api/orders/1/status" \
     "EP6 /api/dashboard/summary" \
     "EP7 /api/orders" \
-    "EP8 /api/orders/1/status" \
+    "EP8 /api/dishes/1/ingredients" \
     "EP9 /api/reservations"
 do
     label=${spec%% *}
@@ -76,7 +76,7 @@ do
     if [ "$label" = EP7 ]; then
         method=POST
         body='{"table_id":1,"items":[{"menu_item_id":1,"quantity":1}]}'
-    elif [ "$label" = EP8 ]; then
+    elif [ "$label" = EP5 ]; then
         method=PATCH
         body='{"status":"paid"}'
     elif [ "$label" = EP9 ]; then
