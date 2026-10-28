@@ -21,7 +21,7 @@
 #   REPS=10 WARMUP=120 DURATION=180 RAMPUP=10
 #   S1 defaults: ENDPOINTS="EP1 EP5" USERS="1 2 4 10"
 #   S2 defaults: ENDPOINTS="EP3 EP7" USERS="200 500 1000"
-#   S3 defaults: ENDPOINTS="EP1 EP2 EP4 EP6" USERS="1 2 4 10"
+#   S3 defaults: ENDPOINTS="EP1 EP2 EP2b EP4 EP6" USERS="1 2 4 10" (EP2b = same-table control for H3, needed at 1 2 only)
 #   DB_POOL_SIZE=1   NestJS control run; results go to results/s2-pool1/
 #   INTERLEAVE_SEED  integer used only in `both` mode
 #
@@ -47,7 +47,7 @@ esac
 case "$scenario" in
     s1) default_endpoints="EP1 EP5"; extra_endpoints="EP2 PING"; default_users="1 2 4 10"; default_warmup=60; default_duration=60 ;;
     s2) default_endpoints="EP3 EP7"; extra_endpoints=""; default_users="200 500 1000"; default_warmup=120; default_duration=120 ;;
-    s3) default_endpoints="EP1 EP2 EP4 EP6"; extra_endpoints="EP8"; default_users="1 2 4 10"; default_warmup=60; default_duration=60 ;;
+    s3) default_endpoints="EP1 EP2 EP2b EP4 EP6"; extra_endpoints="EP8"; default_users="1 2 4 10"; default_warmup=60; default_duration=60 ;;
     *) echo "Unknown scenario: ${scenario} (no jmeter/${scenario}.jmx defaults)" >&2; exit 1 ;;
 esac
 
@@ -107,12 +107,35 @@ align_nestjs_pool() {
     fi
 }
 
+align_laravel_workers() {
+    local desired_workers="${PM_MAX_CHILDREN:-4}"
+    running laravel-app || return 0
+    local actual_workers
+    actual_workers=$(docker compose exec -T laravel-app printenv PM_MAX_CHILDREN 2>/dev/null | tr -d '\r\n')
+    [ -z "$actual_workers" ] && actual_workers=4
+    if [ "$actual_workers" != "$desired_workers" ]; then
+        echo "Recreating laravel-app with PM_MAX_CHILDREN=${desired_workers} (container has ${actual_workers})"
+        PM_MAX_CHILDREN="$desired_workers" docker compose --profile laravel up -d --force-recreate --no-deps laravel-app >/dev/null
+        actual_workers=$(docker compose exec -T laravel-app printenv PM_MAX_CHILDREN 2>/dev/null | tr -d '\r\n')
+        [ -z "$actual_workers" ] && actual_workers=4
+        if [ "$actual_workers" != "$desired_workers" ]; then
+            echo "laravel-app still has PM_MAX_CHILDREN=${actual_workers}, expected ${desired_workers}" >&2
+            exit 1
+        fi
+    fi
+}
+
 docker compose --profile loadtest build -q jmeter
 
 desired_pool="${DB_POOL_SIZE:-10}"
+desired_workers="${PM_MAX_CHILDREN:-4}"
 out_name="${OUT_NAME:-$scenario}"
-if [ -z "${OUT_NAME:-}" ] && [ "$scenario" = s2 ] && [ "$desired_pool" != 10 ]; then
-    out_name="s2-pool${desired_pool}"
+if [ -z "${OUT_NAME:-}" ] && [ "$scenario" = s2 ]; then
+    if [ "$desired_pool" != 10 ]; then
+        out_name="s2-pool${desired_pool}"
+    elif [ "$desired_workers" != 4 ]; then
+        out_name="s2-fpm${desired_workers}"
+    fi
 fi
 
 jmeter() {
@@ -205,9 +228,13 @@ run_one() {
     read -r app nginx other other_nginx <<<"$(stack_for "$framework")"
     ensure_stack "$framework"
     [ "$framework" = nestjs ] && align_nestjs_pool
+    [ "$framework" = laravel ] && align_laravel_workers
 
     local pool_size="n/a"
+    local pm_workers="n/a"
     [ "$framework" = nestjs ] && pool_size=$(docker compose exec -T nestjs-app printenv DB_POOL_SIZE)
+    [ "$framework" = laravel ] && pm_workers=$(docker compose exec -T laravel-app printenv PM_MAX_CHILDREN 2>/dev/null | tr -d '\r\n')
+    [ -z "$pm_workers" ] && pm_workers=4
     local app_cpus app_mem_mib image postgres_cpus
     local git_commit laravel_tree nestjs_tree
     git_commit=$(git rev-parse HEAD)
@@ -230,6 +257,7 @@ run_one() {
             || ! grep -q "\"duration_s\": ${DURATION}," "${dir}/meta.json" \
             || ! grep -q "\"rampup_s\": ${RAMPUP}," "${dir}/meta.json" \
             || ! grep -q "\"db_pool_size\": \"${pool_size}\"," "${dir}/meta.json" \
+            || ( [ "$framework" = laravel ] && ! grep -q "\"pm_max_children\": \"${pm_workers}\"," "${dir}/meta.json" ) \
             || ! grep -q "\"git_commit\": \"${git_commit}\"," "${dir}/meta.json" \
             || ! grep -q "\"${framework}_app_tree\": \"$( [ "$framework" = laravel ] && printf '%s' "$laravel_tree" || printf '%s' "$nestjs_tree" )\"," "${dir}/meta.json"; then
             echo "${dir} holds a run with different parameters or source revision; move it away first." >&2
@@ -329,6 +357,7 @@ run_one() {
   "postgres_cpus": ${postgres_cpus},
   "app_memory_mib": ${app_mem_mib},
   "db_pool_size": "${pool_size}",
+  "pm_max_children": "${pm_workers}",
   "app_image": "${image}",
   "interleave_seed": ${INTERLEAVE_SEED},
   "framework_order": "${order}",

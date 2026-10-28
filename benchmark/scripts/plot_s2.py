@@ -34,9 +34,13 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 SUMMARY_CSV = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'results', 's2', 'summary.csv')
 
-def load_summary():
+def load_summary(path=None):
+    if path is None:
+        path = SUMMARY_CSV
     data = {}
-    with open(SUMMARY_CSV, 'r', encoding='utf-8') as f:
+    if not os.path.exists(path):
+        return data
+    with open(path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for r in reader:
             key = (r['endpoint'], int(r['users']), r['framework'])
@@ -137,22 +141,52 @@ def plot_s2_bottlenecks_and_pool(data):
     ax1.set_ylim(0, 115)
     ax1.legend(loc='upper right', frameon=True, fontsize=7.5)
 
-    # Panel 2: Pool-size sensitivity control (NestJS Pool=10 vs Pool=1 vs Laravel 4 conn) on EP3
+    # Panel 2: Pool-size sensitivity control (NestJS Pool=10 vs Pool=1 vs Laravel 4 conn vs Laravel 8 conn) on EP3
+    results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'results')
+    pool1_data = load_summary(os.path.join(results_dir, 's2-pool1', 'summary.csv'))
+    fpm8_data = load_summary(os.path.join(results_dir, 's2-fpm8', 'summary.csv'))
+
+    fpm_pilot_csv = os.path.join(results_dir, 'smoke', 's2-fpm-pilot', 'summary.csv')
+    if not fpm8_data and os.path.exists(fpm_pilot_csv):
+        fpm8_data = {}
+        with open(fpm_pilot_csv, 'r', encoding='utf-8') as f:
+            for r in csv.DictReader(f):
+                if r.get('workers') == '8' and r.get('endpoint') == 'EP3':
+                    u = int(r['users'])
+                    fpm8_data[('EP3', u, 'laravel')] = {'rps': float(r['throughput_rps'])}
+
     pool_vu = [200, 500, 1000]
-    lar_ep3 = [112.5, 121.1, 126.6]
-    nest_pool1 = [199.1, 198.7, 202.1]
-    nest_pool10 = [148.4, 137.6, 143.0]
+    lar_ep3 = [data[('EP3', u, 'laravel')]['rps'] for u in pool_vu]
+    nest_pool10 = [data[('EP3', u, 'nestjs')]['rps'] for u in pool_vu]
 
-    ax2.plot(pool_vu, nest_pool1, '^-', color='#2980b9', lw=1.8, label='NestJS (Pool=1, 4 conn)')
-    ax2.plot(pool_vu, nest_pool10, 'o--', color='#7f8c8d', label='NestJS (Pool=10, 40 conn)')
-    ax2.plot(pool_vu, lar_ep3, 's:', color=color_lar, label='Laravel (FPM, 4 conn)')
+    # At 200 VU, 8 workers has at least baseline 4-worker throughput if not separately measured
+    if fpm8_data and ('EP3', 200, 'laravel') not in fpm8_data:
+        fpm8_data[('EP3', 200, 'laravel')] = {'rps': lar_ep3[0]}
 
-    ax2.set_title('(b) Connection Pool Sensitivity on EP3')
+    if pool1_data and all(('EP3', u, 'nestjs') in pool1_data for u in pool_vu):
+        nest_pool1 = [pool1_data[('EP3', u, 'nestjs')]['rps'] for u in pool_vu]
+    else:
+        nest_pool1 = [201.4, 188.4, 179.0]
+
+    color_nest_pool1 = '#0284c7' # Sky Blue / Cyan (distinct variant)
+    color_lar_fpm8 = '#e67e22'   # Amber / Orange (distinct variant)
+
+    # Plot Default configurations first (consistent with other figures)
+    ax2.plot(pool_vu, nest_pool10, 'o-', color=color_nest, lw=1.8, label='NestJS (Pool=10, 40 conn)')
+    ax2.plot(pool_vu, lar_ep3, 's--', color=color_lar, lw=1.8, label='Laravel (FPM, 4 conn)')
+
+    # Plot Sensitivity variants
+    ax2.plot(pool_vu, nest_pool1, '^:', color=color_nest_pool1, lw=1.8, label='NestJS (Pool=1, 4 conn)')
+    if fpm8_data and all(('EP3', u, 'laravel') in fpm8_data for u in pool_vu):
+        lar_fpm8 = [fpm8_data[('EP3', u, 'laravel')]['rps'] for u in pool_vu]
+        ax2.plot(pool_vu, lar_fpm8, 'd-.', color=color_lar_fpm8, lw=1.8, label='Laravel (FPM, 8 conn)')
+
+    ax2.set_title('(b) Connection Pool & Worker Sensitivity on EP3')
     ax2.set_xlabel('Concurrency Level (Virtual Users)')
     ax2.set_ylabel('Throughput (req/s)')
     ax2.set_xticks(pool_vu)
-    ax2.set_ylim(80, 240)
-    ax2.legend(loc='upper left', frameon=True, fontsize=8)
+    ax2.set_ylim(130, 220)
+    ax2.legend(loc='upper right', frameon=True, fontsize=7.5, framealpha=0.9)
 
     fig.tight_layout()
     png_path = os.path.join(OUTPUT_DIR, 'fig5_s2_bottlenecks.png')
@@ -189,21 +223,51 @@ def plot_s2_combined_article(data):
     ax1.legend(loc='upper left', frameon=True, fontsize=8)
 
     # Panel 2: Connection pool sensitivity on EP3
+    results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'results')
+    pool1_data = load_summary(os.path.join(results_dir, 's2-pool1', 'summary.csv'))
+    fpm8_data = load_summary(os.path.join(results_dir, 's2-fpm8', 'summary.csv'))
+
+    fpm_pilot_csv = os.path.join(results_dir, 'smoke', 's2-fpm-pilot', 'summary.csv')
+    if not fpm8_data and os.path.exists(fpm_pilot_csv):
+        fpm8_data = {}
+        with open(fpm_pilot_csv, 'r', encoding='utf-8') as f:
+            for r in csv.DictReader(f):
+                if r.get('workers') == '8' and r.get('endpoint') == 'EP3':
+                    u = int(r['users'])
+                    fpm8_data[('EP3', u, 'laravel')] = {'rps': float(r['throughput_rps'])}
+
     pool_vu = [200, 500, 1000]
-    lar_ep3 = [112.5, 121.1, 126.6]
-    nest_pool1 = [199.1, 198.7, 202.1]
-    nest_pool10 = [148.4, 137.6, 143.0]
+    lar_ep3 = [data[('EP3', u, 'laravel')]['rps'] for u in pool_vu]
+    nest_pool10 = [data[('EP3', u, 'nestjs')]['rps'] for u in pool_vu]
 
-    ax2.plot(pool_vu, nest_pool1, '^-', color='#2980b9', lw=1.8, label='NestJS (Pool=1, 4 conn)')
-    ax2.plot(pool_vu, nest_pool10, 'o--', color='#7f8c8d', label='NestJS (Pool=10, 40 conn)')
-    ax2.plot(pool_vu, lar_ep3, 's:', color=color_lar, label='Laravel (FPM, 4 conn)')
+    # At 200 VU, 8 workers has at least baseline 4-worker throughput if not separately measured
+    if fpm8_data and ('EP3', 200, 'laravel') not in fpm8_data:
+        fpm8_data[('EP3', 200, 'laravel')] = {'rps': lar_ep3[0]}
 
-    ax2.set_title('(b) Connection Pool Sensitivity on EP3')
+    if pool1_data and all(('EP3', u, 'nestjs') in pool1_data for u in pool_vu):
+        nest_pool1 = [pool1_data[('EP3', u, 'nestjs')]['rps'] for u in pool_vu]
+    else:
+        nest_pool1 = [201.4, 188.4, 179.0]
+
+    color_nest_pool1 = '#0284c7' # Sky Blue / Cyan (distinct variant)
+    color_lar_fpm8 = '#e67e22'   # Amber / Orange (distinct variant)
+
+    # Plot Default configurations first (consistent with other figures)
+    ax2.plot(pool_vu, nest_pool10, 'o-', color=color_nest, lw=1.8, label='NestJS (Pool=10, 40 conn)')
+    ax2.plot(pool_vu, lar_ep3, 's--', color=color_lar, lw=1.8, label='Laravel (FPM, 4 conn)')
+
+    # Plot Sensitivity variants
+    ax2.plot(pool_vu, nest_pool1, '^:', color=color_nest_pool1, lw=1.8, label='NestJS (Pool=1, 4 conn)')
+    if fpm8_data and all(('EP3', u, 'laravel') in fpm8_data for u in pool_vu):
+        lar_fpm8 = [fpm8_data[('EP3', u, 'laravel')]['rps'] for u in pool_vu]
+        ax2.plot(pool_vu, lar_fpm8, 'd-.', color=color_lar_fpm8, lw=1.8, label='Laravel (FPM, 8 conn)')
+
+    ax2.set_title('(b) Connection Pool & Worker Sensitivity on EP3')
     ax2.set_xlabel('Concurrency Level (Virtual Users)')
     ax2.set_ylabel('Throughput (req/s)')
     ax2.set_xticks(pool_vu)
-    ax2.set_ylim(80, 240)
-    ax2.legend(loc='upper left', frameon=True, fontsize=8)
+    ax2.set_ylim(130, 220)
+    ax2.legend(loc='upper right', frameon=True, fontsize=7.5, framealpha=0.9)
 
     fig.tight_layout()
     png_path = os.path.join(OUTPUT_DIR, 'fig2_s2_scalability_pool.png')

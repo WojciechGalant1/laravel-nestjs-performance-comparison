@@ -11,6 +11,9 @@ H1_ERROR_LIMIT_PCT = 1.0
 H1_ENDPOINTS = ("EP1", "EP5")
 H3_ENDPOINTS = ("EP2", "EP4", "EP6")
 H3_PRIMARY_ENDPOINT = "EP2"
+# Reference endpoint for D_k. All S3 endpoints are contrasted with EP2b (same-table control).
+H3_DEFAULT_REFERENCE = "EP2b"
+H3_REFERENCE = {"EP2": "EP2b", "EP4": "EP2b", "EP6": "EP2b"}
 H3_VERDICT_VU = 2
 H3_CONSISTENCY_VU = 1
 H2_SATURATION_PCT = 5.0
@@ -85,9 +88,9 @@ def paired_summary(index, mode, endpoint, users):
     return FrameworkPair(laravel, nestjs)
 
 
-def metric_contrast(index, mode, endpoint, users, metric):
+def metric_contrast(index, mode, endpoint, users, metric, reference="EP1"):
     endpoint_pair = paired_summary(index, mode, endpoint, users)
-    baseline_pair = paired_summary(index, mode, "EP1", users)
+    baseline_pair = paired_summary(index, mode, reference, users)
     if endpoint_pair is None or baseline_pair is None:
         return None
     endpoint_values = endpoint_pair.metric(metric)

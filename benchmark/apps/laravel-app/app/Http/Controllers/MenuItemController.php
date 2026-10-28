@@ -19,4 +19,17 @@ class MenuItemController extends Controller
 
         return response()->json($menuItems);
     }
+
+    /**
+     * EP2b: GET /api/menu-items/plain — same-table control for H3.
+     * Same filter and pagination as EP2, but without loading `dish` (0 relations).
+     */
+    public function indexPlain(): JsonResponse
+    {
+        $menuItems = MenuItem::query()
+            ->where('is_available', true)
+            ->paginate(20);
+
+        return response()->json($menuItems);
+    }
 }

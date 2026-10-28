@@ -31,6 +31,7 @@ x-laravel-env: &laravel-env
   CACHE_STORE: array
   SESSION_DRIVER: array
   QUEUE_CONNECTION: sync
+  PM_MAX_CHILDREN: ${PM_MAX_CHILDREN:-4}
 
 services:
   postgres:
@@ -72,6 +73,8 @@ services:
       context: ./apps/laravel-app
       target: app
     environment: *laravel-env
+    volumes:
+      - ./apps/laravel-app/docker/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-benchmark.conf:ro
     cpus: ${APP_CPUS:-4}
     mem_limit: ${APP_MEMORY:-2g}
     depends_on:

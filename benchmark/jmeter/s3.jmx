@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  S3 - relational complexity (H3): EP1 (baseline), EP2 (primary), EP4, EP5, EP6. All five are reads and succeed with HTTP 200.
+  S3 - relational complexity (H3): EP1 (reference), EP2 (primary), EP2b (same-table control without relations), EP4, EP6; EP8 (N:M via pivot, thesis only). All are reads and succeed with HTTP 200.
   The X-Debug-Queries header is intentionally absent: the query counter must stay
   inert during the load run (scripts/query-count.sh records it out of band).
 
   Properties (passed with -J by scripts/run-scenario.sh; the defaults let the plan
   run unchanged in the JMeter GUI against the Laravel stack on localhost:8080):
     host, port        target nginx (in the runner: laravel-nginx / nestjs-nginx, port 80)
-    endpoint          EP1 | EP2 | EP4 | EP5 | EP6 run one endpoint in isolation
+    endpoint          EP1 | EP2 | EP2b | EP4 | EP6 | EP8 run one endpoint in isolation
     users, rampup, duration   closed workload: users threads, no think time, duration in seconds
     orders.max, dishes.max    id ranges from jmeter/data/ranges.properties (-q); both are contiguous
 -->
@@ -187,6 +187,17 @@
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP2b">
+            <stringProp name="HTTPSampler.path">/api/menu-items/plain?page=${__Random(1,${__P(ep2.pages,23)})}</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.postBodyRaw">false</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
           <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP4">
             <stringProp name="HTTPSampler.path">/api/orders/${__Random(1,${__P(orders.max,100000)})}</stringProp>
             <stringProp name="HTTPSampler.method">GET</stringProp>
@@ -198,7 +209,7 @@
             </elementProp>
           </HTTPSamplerProxy>
           <hashTree/>
-          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP5">
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="EP8">
             <stringProp name="HTTPSampler.path">/api/dishes/${__Random(1,${__P(dishes.max,500)})}/ingredients</stringProp>
             <stringProp name="HTTPSampler.method">GET</stringProp>
             <boolProp name="HTTPSampler.follow_redirects">false</boolProp>

@@ -48,7 +48,8 @@ from pathlib import Path
 from summarize_common import (
     BOOTSTRAP_SEED, H1_ENDPOINTS, H1_ERROR_LIMIT_PCT, H1_LIMIT_PCT,
     H2_SATURATION_PCT, H2_SLOPE_MIN_VU, H3_CONSISTENCY_VU, H3_ENDPOINTS,
-    H3_PRIMARY_ENDPOINT, H3_THRESHOLD_MS, H3_VERDICT_VU, JMETER_CPU_FLAG_PCT,
+    H3_PRIMARY_ENDPOINT, H3_REFERENCE, H3_DEFAULT_REFERENCE, H3_THRESHOLD_MS,
+    H3_VERDICT_VU, JMETER_CPU_FLAG_PCT,
     LOWLOAD_CPU_SHARE_MAX,
     LOWLOAD_SCALING_MIN, PLANNED_VU, ROOT,
     d_k, fmt_number, fmt_ratio, group_values, metric_contrast, paired_summary,
@@ -364,11 +365,20 @@ def h3_table(summary, rows):
     present_endpoints = [ep for ep in ["EP2", "EP4", "EP5", "EP6"] if any(r.get("endpoint") == ep for r in summary)]
     eval_endpoints = [ep for ep in H3_ENDPOINTS if ep in present_endpoints] or present_endpoints
 
+    present_labels = {r.get("endpoint") for r in summary}
+    reference_of = {}
+    for ep in eval_endpoints:
+        ref = H3_REFERENCE.get(ep, H3_DEFAULT_REFERENCE)
+        if ref not in present_labels:
+            ref = H3_DEFAULT_REFERENCE
+        reference_of[ep] = ref
+
     pair_sets = {}
     for endpoint in eval_endpoints:
-        members, diagnostics = lowload_set(summary, ("EP1", endpoint))
+        ref = reference_of[endpoint]
+        members, diagnostics = lowload_set(summary, (ref, endpoint))
         pair_sets[endpoint] = members
-        print_lowload(members, diagnostics, f"S3 pair (EP1, {endpoint})")
+        print_lowload(members, diagnostics, f"S3 pair ({ref}, {endpoint})")
         verdict_vu, consistency_vu = pair_levels(members)
         if verdict_vu is not None:
             print(f"  {endpoint}: verdict {verdict_vu} VU, consistency {consistency_vu} VU")
@@ -379,7 +389,8 @@ def h3_table(summary, rows):
 
     index = summary_index(summary)
     rng = random.Random(BOOTSTRAP_SEED)
-    print("\nH3: D_k = (p95_L(k) − p95_N(k)) − (p95_L(EP1) − p95_N(EP1)), medians of repetitions")
+    print("\nH3: D_k = (p95_L(k) − p95_N(k)) − (p95_L(ref) − p95_N(ref)), medians of repetitions; "
+          "ref = EP2b for EP2 (same-table control), EP1 otherwise")
     header = (f"{'mode':9} {'endpoint':8} {'VU':>4} {'p95 L':>8} {'p95 N':>8} {'L/N':>6} "
               f"{'D_k':>8} {'CI lo':>8} {'CI hi':>8}  tag")
     print(header)
@@ -391,10 +402,11 @@ def h3_table(summary, rows):
         if framework != "laravel" or endpoint not in eval_endpoints:
             continue
         nest = index.get((mode, endpoint, users, "nestjs"))
-        ep1_l = index.get((mode, "EP1", users, "laravel"))
-        ep1_n = index.get((mode, "EP1", users, "nestjs"))
+        ref = reference_of[endpoint]
+        ep1_l = index.get((mode, ref, users, "laravel"))
+        ep1_n = index.get((mode, ref, users, "nestjs"))
         if nest is None or ep1_l is None or ep1_n is None:
-            print(f"{mode:9} {endpoint:8} {users:>4}  (missing pair or EP1)")
+            print(f"{mode:9} {endpoint:8} {users:>4}  (missing pair or {ref})")
             continue
         point = d_k(
             lar["p95_ms_median"], nest["p95_ms_median"],
@@ -413,7 +425,7 @@ def h3_table(summary, rows):
             role = "consistency"
         lo = hi = None
         if in_set:
-            boot = bootstrap_d_k(rows, mode, endpoint, users, rng)
+            boot = bootstrap_d_k(rows, mode, endpoint, users, rng, reference=ref)
             if boot:
                 _, lo, hi = boot
                 ci_at[(mode, endpoint, users)] = (lo, hi)
@@ -444,8 +456,10 @@ def h3_table(summary, rows):
                 per_k[endpoint] = "not evaluable"
             elif lo > y and point_consistency > 0:
                 per_k[endpoint] = "supported"
+            elif hi <= 0:
+                per_k[endpoint] = "rejected"
             else:
-                per_k[endpoint] = "not supported"
+                per_k[endpoint] = "inconclusive"
             print(f"H3 {endpoint} ({mode}): {per_k[endpoint]} "
                   f"at {verdict_vu} VU (consistency {consistency_vu} VU)")
 
@@ -460,10 +474,11 @@ def h3_table(summary, rows):
         primary_members = pair_sets.get(primary_ep, [])
         primary_verdict_vu, primary_consistency_vu = pair_levels(primary_members)
         if primary_verdict_vu is not None and primary_consistency_vu is not None:
-            print(f"  H3 {primary_ep} secondary contrasts (signed difference relative to EP1; no verdict):")
+            ref_label = reference_of.get(primary_ep, H3_DEFAULT_REFERENCE)
+            print(f"  H3 {primary_ep} secondary contrasts (signed difference relative to {ref_label}; no verdict):")
             for users in (primary_verdict_vu, primary_consistency_vu):
-                mean_d = metric_contrast(index, mode, primary_ep, users, "mean_ms")
-                little_d = metric_contrast(index, mode, primary_ep, users, "little_ms")
+                mean_d = metric_contrast(index, mode, primary_ep, users, "mean_ms", reference=ref_label)
+                little_d = metric_contrast(index, mode, primary_ep, users, "little_ms", reference=ref_label)
                 mean_s = "n/d" if mean_d is None else f"{mean_d:.2f} ms"
                 little_s = "n/d" if little_d is None else f"{little_d:.2f} ms"
                 print(f"    {users} VU: mean response D={mean_s}; N/X D={little_s}")

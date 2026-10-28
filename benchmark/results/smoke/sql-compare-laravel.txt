@@ -1,0 +1,182 @@
+# laravel  repeats=20  2026-10-27T10:06:48Z
+
+## EP2 GET /api/menu-items?page=1  http=200  X-Query-Count=3
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                   query                                                                   
+-------+----------+---------+------------+-------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    0.934 |   0.047 |      0.047 | select count(*) as "aggregate" from "menu_items" where "is_available" = $1
+    20 |    0.926 |   0.046 |      0.046 | select * from "dishes" where "dishes"."id" in ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+    20 |    0.305 |   0.015 |      0.015 | select * from "menu_items" where "is_available" = $1 limit $2 offset $3
+(3 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             3.000 |                       3 |                       0 |                          
+(1 row)
+
+
+## EP2b GET /api/menu-items/plain?page=1  http=200  X-Query-Count=2
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                   query                                    
+-------+----------+---------+------------+----------------------------------------------------------------------------
+    20 |    1.003 |   0.050 |      0.050 | select count(*) as "aggregate" from "menu_items" where "is_available" = $1
+    20 |    0.307 |   0.015 |      0.015 | select * from "menu_items" where "is_available" = $1 limit $2 offset $3
+(2 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             2.000 |                       2 |                       0 |                          
+(1 row)
+
+
+## EP1 GET /api/tables?page=1  http=200  X-Query-Count=2
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                 query                                 
+-------+----------+---------+------------+-----------------------------------------------------------------------
+    20 |    0.476 |   0.024 |      0.024 | select count(*) as "aggregate" from "tables"
+    20 |    0.462 |   0.023 |      0.023 | select * from "tables" order by "table_number" asc limit $1 offset $2
+(2 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             2.000 |                       2 |                       0 |                          
+(1 row)
+
+
+## EP3 GET /api/orders?page=1  http=200  X-Query-Count=4
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                query                                                                 
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------
+    20 |   82.449 |   4.122 |      4.122 | select count(*) as "aggregate" from "orders"
+    20 |    0.785 |   0.039 |      0.039 | select * from "orders" order by "ordered_at" desc limit $1 offset $2
+    20 |    0.580 |   0.029 |      0.029 | select * from "users" where "users"."id" in ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+    20 |    0.575 |   0.029 |      0.029 | select * from "tables" where "tables"."id" in ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+(4 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             4.000 |                       4 |                       0 |                          
+(1 row)
+
+
+## EP4 GET /api/orders/1  http=200  X-Query-Count=5
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                               query                                
+-------+----------+---------+------------+--------------------------------------------------------------------
+    20 |    0.449 |   0.022 |      0.022 | select * from "users" where "users"."id" in ($1)
+    20 |    0.407 |   0.020 |      0.020 | select * from "orders" where "id" = $1 limit $2
+    20 |    0.371 |   0.019 |      0.019 | select * from "tables" where "tables"."id" in ($1)
+    20 |    0.262 |   0.013 |      0.013 | select * from "order_items" where "order_items"."order_id" in ($1)
+    20 |    0.182 |   0.009 |      0.009 | select * from "menu_items" where "menu_items"."id" in ($1)
+    20 |    0.171 |   0.009 |      0.009 | select * from "dishes" where "dishes"."id" in ($1)
+(6 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             6.000 |                       6 |                       0 |                          
+(1 row)
+
+
+## EP5 PATCH /api/orders/1/status  http=200  X-Query-Count=0
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                      query                      
+-------+----------+---------+------------+-------------------------------------------------
+    20 |    0.393 |   0.020 |      0.020 | select * from "orders" where "id" = $1 limit $2
+(1 row)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             1.000 |                       1 |                       0 |                          
+(1 row)
+
+
+## EP6 GET /api/dashboard/summary  http=200  X-Query-Count=1
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                                                                                                query                                                                                                                                                                                                                                                                                                
+-------+----------+---------+------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 | 2166.883 | 108.344 |    108.344 | select "dishes"."category", COUNT(DISTINCT orders.id) as orders_count, SUM(order_items.quantity) as items_sold, SUM(order_items.quantity * order_items.unit_price) as revenue, AVG(order_items.quantity * order_items.unit_price) as avg_item_value from "order_items" inner join "orders" on "order_items"."order_id" = "orders"."id" inner join "menu_items" on "order_items"."menu_item_id" = "menu_items"."id" inner join "dishes" on "menu_items"."dish_id" = "dishes"."id" where "orders"."ordered_at" >= $1 and "orders"."status" != $2 group by "dishes"."category" order by "revenue" desc
+(1 row)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             1.000 |                       1 |                       0 |                          
+(1 row)
+
+
+## EP7 POST /api/orders  http=201  X-Query-Count=5
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                         query                                                                                          
+-------+----------+---------+------------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |   23.470 |   1.173 |      1.173 | insert into "order_items" ("menu_item_id", "quantity", "unit_price", "notes", "status", "order_id", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7, $8) returning "id"
+    20 |    2.630 |   0.132 |      0.132 | insert into "orders" ("table_id", "user_id", "status", "total_price", "ordered_at", "updated_at", "created_at") values ($1, $2, $3, $4, $5, $6, $7) returning "id"
+    20 |    1.106 |   0.055 |      0.055 | update "orders" set "total_price" = $1, "updated_at" = $2 where "id" = $3
+    20 |    0.307 |   0.015 |      0.015 | select * from "menu_items" where "id" in ($1) and "is_available" = $2
+    20 |    0.248 |   0.012 |      0.012 | select exists(select * from "tables" where "tables"."id" = $1) as "exists"
+    20 |    0.022 |   0.001 |      0.001 | BEGIN
+    20 |    0.009 |   0.000 |      0.000 | COMMIT
+(7 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             7.000 |                       7 |                       2 |                     2.000
+(1 row)
+
+
+## EP8 GET /api/dishes/1/ingredients  http=200  X-Query-Count=1
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                            query                                                                                                                                                                                                                             
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    0.680 |   0.034 |      0.034 | select "ingredients".*, "dish_ingredients"."dish_id" as "pivot_dish_id", "dish_ingredients"."ingredient_id" as "pivot_ingredient_id", "dish_ingredients"."quantity" as "pivot_quantity", "dish_ingredients"."created_at" as "pivot_created_at", "dish_ingredients"."updated_at" as "pivot_updated_at" from "ingredients" inner join "dish_ingredients" on "ingredients"."id" = "dish_ingredients"."ingredient_id" where "dish_ingredients"."dish_id" in ($1)
+    20 |    0.373 |   0.019 |      0.019 | select * from "dishes" where "id" = $1 limit $2
+(2 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             2.000 |                       2 |                       0 |                          
+(1 row)
+
+
+## EP9 POST /api/reservations  http=201  X-Query-Count=3
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                            query                             
+-------+----------+---------+------------+--------------------------------------------------------------
+     1 |    0.023 |   0.023 |      0.023 | select count(*) as "aggregate" from "tables" where "id" = $1
+     1 |    0.009 |   0.009 |      0.009 | select * from "tables" where "tables"."id" = $1 limit $2
+(2 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             2.000 |                       2 |                       0 |                          
+(1 row)
+
+

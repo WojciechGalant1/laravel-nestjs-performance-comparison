@@ -1,0 +1,184 @@
+# nestjs  repeats=20  2026-10-27T10:09:32Z
+
+## EP2 GET /api/menu-items?page=1  http=200  X-Query-Count=3
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                   query                                                                                                                                                                                                    
+-------+----------+---------+------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    1.747 |   0.087 |      0.087 | SELECT "Dish"."id" AS "Dish_id", "Dish"."name" AS "Dish_name", "Dish"."category" AS "Dish_category", "Dish"."created_at" AS "Dish_created_at", "Dish"."updated_at" AS "Dish_updated_at" FROM "dishes" "Dish" INNER JOIN "menu_items" "MenuItem" ON "MenuItem"."dish_id" = "Dish"."id" WHERE "MenuItem"."id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+    20 |    0.687 |   0.034 |      0.034 | SELECT COUNT($2) AS "cnt" FROM "menu_items" "MenuItem" WHERE (("MenuItem"."is_available" = $1))
+    20 |    0.392 |   0.020 |      0.020 | SELECT "MenuItem"."id" AS "MenuItem_id", "MenuItem"."dish_id" AS "MenuItem_dish_id", "MenuItem"."price" AS "MenuItem_price", "MenuItem"."is_available" AS "MenuItem_is_available", "MenuItem"."created_at" AS "MenuItem_created_at", "MenuItem"."updated_at" AS "MenuItem_updated_at" FROM "menu_items" "MenuItem" WHERE (("MenuItem"."is_available" = $1)) LIMIT $2 OFFSET $3
+(3 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             3.000 |                       3 |                       0 |                          
+(1 row)
+
+
+## EP2b GET /api/menu-items/plain?page=1  http=200  X-Query-Count=2
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                     query                                                                                                                                                                                      
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    0.823 |   0.041 |      0.041 | SELECT COUNT($2) AS "cnt" FROM "menu_items" "MenuItem" WHERE (("MenuItem"."is_available" = $1))
+    20 |    0.398 |   0.020 |      0.020 | SELECT "MenuItem"."id" AS "MenuItem_id", "MenuItem"."dish_id" AS "MenuItem_dish_id", "MenuItem"."price" AS "MenuItem_price", "MenuItem"."is_available" AS "MenuItem_is_available", "MenuItem"."created_at" AS "MenuItem_created_at", "MenuItem"."updated_at" AS "MenuItem_updated_at" FROM "menu_items" "MenuItem" WHERE (("MenuItem"."is_available" = $1)) LIMIT $2 OFFSET $3
+(2 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             2.000 |                       2 |                       0 |                          
+(1 row)
+
+
+## EP1 GET /api/tables?page=1  http=200  X-Query-Count=2
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                                     query                                                                                                                                                                                                                                      
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    0.569 |   0.028 |      0.028 | SELECT "RestaurantTable"."id" AS "RestaurantTable_id", "RestaurantTable"."table_number" AS "RestaurantTable_table_number", "RestaurantTable"."capacity" AS "RestaurantTable_capacity", "RestaurantTable"."status" AS "RestaurantTable_status", "RestaurantTable"."created_at" AS "RestaurantTable_created_at", "RestaurantTable"."updated_at" AS "RestaurantTable_updated_at" FROM "tables" "RestaurantTable" ORDER BY "RestaurantTable"."table_number" ASC LIMIT $1 OFFSET $2
+    20 |    0.365 |   0.018 |      0.018 | SELECT COUNT($1) AS "cnt" FROM "tables" "RestaurantTable"
+(2 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             2.000 |                       2 |                       0 |                          
+(1 row)
+
+
+## EP3 GET /api/orders?page=1  http=200  X-Query-Count=4
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                                                                                                   query                                                                                                                                                                                                                                                                                                    
+-------+----------+---------+------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |   80.050 |   4.002 |      4.002 | SELECT COUNT($1) AS "cnt" FROM "orders" "Order"
+    20 |    2.003 |   0.100 |      0.100 | SELECT "RestaurantTable"."id" AS "RestaurantTable_id", "RestaurantTable"."table_number" AS "RestaurantTable_table_number", "RestaurantTable"."capacity" AS "RestaurantTable_capacity", "RestaurantTable"."status" AS "RestaurantTable_status", "RestaurantTable"."created_at" AS "RestaurantTable_created_at", "RestaurantTable"."updated_at" AS "RestaurantTable_updated_at" FROM "tables" "RestaurantTable" INNER JOIN "orders" "Order" ON "Order"."table_id" = "RestaurantTable"."id" WHERE "Order"."id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+    20 |    1.897 |   0.095 |      0.095 | SELECT "User"."id" AS "User_id", "User"."first_name" AS "User_first_name", "User"."last_name" AS "User_last_name", "User"."email" AS "User_email", "User"."role" AS "User_role", "User"."created_at" AS "User_created_at", "User"."updated_at" AS "User_updated_at" FROM "users" "User" INNER JOIN "orders" "Order" ON "Order"."user_id" = "User"."id" WHERE "Order"."id" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+    20 |    0.882 |   0.044 |      0.044 | SELECT "Order"."id" AS "Order_id", "Order"."table_id" AS "Order_table_id", "Order"."user_id" AS "Order_user_id", "Order"."total_price" AS "Order_total_price", "Order"."ordered_at" AS "Order_ordered_at", "Order"."status" AS "Order_status", "Order"."created_at" AS "Order_created_at", "Order"."updated_at" AS "Order_updated_at" FROM "orders" "Order" ORDER BY "Order"."ordered_at" DESC LIMIT $1 OFFSET $2
+(4 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             4.000 |                       4 |                       0 |                          
+(1 row)
+
+
+## EP4 GET /api/orders/1  http=200  X-Query-Count=5
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                                                          query                                                                                                                                                                                                                                                           
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    0.413 |   0.021 |      0.021 | SELECT "Order"."id" AS "Order_id", "Order"."table_id" AS "Order_table_id", "Order"."user_id" AS "Order_user_id", "Order"."total_price" AS "Order_total_price", "Order"."ordered_at" AS "Order_ordered_at", "Order"."status" AS "Order_status", "Order"."created_at" AS "Order_created_at", "Order"."updated_at" AS "Order_updated_at" FROM "orders" "Order" WHERE (("Order"."id" = $1)) LIMIT $2
+    20 |    0.265 |   0.013 |      0.013 | SELECT "OrderItem"."id" AS "OrderItem_id", "OrderItem"."order_id" AS "OrderItem_order_id", "OrderItem"."menu_item_id" AS "OrderItem_menu_item_id", "OrderItem"."quantity" AS "OrderItem_quantity", "OrderItem"."unit_price" AS "OrderItem_unit_price", "OrderItem"."notes" AS "OrderItem_notes", "OrderItem"."status" AS "OrderItem_status", "OrderItem"."created_at" AS "OrderItem_created_at", "OrderItem"."updated_at" AS "OrderItem_updated_at" FROM "order_items" "OrderItem" WHERE (("OrderItem"."order_id" = $1))
+    20 |    0.264 |   0.013 |      0.013 | SELECT "User"."id" AS "User_id", "User"."first_name" AS "User_first_name", "User"."last_name" AS "User_last_name", "User"."email" AS "User_email", "User"."role" AS "User_role", "User"."created_at" AS "User_created_at", "User"."updated_at" AS "User_updated_at" FROM "users" "User" WHERE (("User"."id" = $1)) LIMIT $2
+    20 |    0.210 |   0.011 |      0.011 | SELECT "MenuItem"."id" AS "MenuItem_id", "MenuItem"."dish_id" AS "MenuItem_dish_id", "MenuItem"."price" AS "MenuItem_price", "MenuItem"."is_available" AS "MenuItem_is_available", "MenuItem"."created_at" AS "MenuItem_created_at", "MenuItem"."updated_at" AS "MenuItem_updated_at" FROM "menu_items" "MenuItem" INNER JOIN "order_items" "OrderItem" ON "OrderItem"."menu_item_id" = "MenuItem"."id" WHERE "OrderItem"."id" IN ($1)
+    20 |    0.208 |   0.010 |      0.010 | SELECT "RestaurantTable"."id" AS "RestaurantTable_id", "RestaurantTable"."table_number" AS "RestaurantTable_table_number", "RestaurantTable"."capacity" AS "RestaurantTable_capacity", "RestaurantTable"."status" AS "RestaurantTable_status", "RestaurantTable"."created_at" AS "RestaurantTable_created_at", "RestaurantTable"."updated_at" AS "RestaurantTable_updated_at" FROM "tables" "RestaurantTable" WHERE (("RestaurantTable"."id" = $1)) LIMIT $2
+    20 |    0.162 |   0.008 |      0.008 | SELECT "Dish"."id" AS "Dish_id", "Dish"."name" AS "Dish_name", "Dish"."category" AS "Dish_category", "Dish"."created_at" AS "Dish_created_at", "Dish"."updated_at" AS "Dish_updated_at" FROM "dishes" "Dish" INNER JOIN "menu_items" "MenuItem" ON "MenuItem"."dish_id" = "Dish"."id" WHERE "MenuItem"."id" IN ($1)
+(6 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             6.000 |                       6 |                       0 |                          
+(1 row)
+
+
+## EP5 PATCH /api/orders/1/status  http=200  X-Query-Count=1
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                              query                                                                                                                                                                                               
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    0.430 |   0.021 |      0.021 | SELECT "Order"."id" AS "Order_id", "Order"."table_id" AS "Order_table_id", "Order"."user_id" AS "Order_user_id", "Order"."total_price" AS "Order_total_price", "Order"."ordered_at" AS "Order_ordered_at", "Order"."status" AS "Order_status", "Order"."created_at" AS "Order_created_at", "Order"."updated_at" AS "Order_updated_at" FROM "orders" "Order" WHERE (("Order"."id" = $1)) LIMIT $2
+    20 |    0.235 |   0.012 |      0.012 | SELECT "Order"."id" AS "Order_id", "Order"."table_id" AS "Order_table_id", "Order"."user_id" AS "Order_user_id", "Order"."total_price" AS "Order_total_price", "Order"."ordered_at" AS "Order_ordered_at", "Order"."status" AS "Order_status", "Order"."created_at" AS "Order_created_at", "Order"."updated_at" AS "Order_updated_at" FROM "orders" "Order" WHERE "Order"."id" = $1
+(2 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             2.000 |                       2 |                       0 |                          
+(1 row)
+
+
+## EP6 GET /api/dashboard/summary  http=200  X-Query-Count=1
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                                                                                                                                              query                                                                                                                                                                                                                                                                                                                                               
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 | 2167.375 | 108.369 |    108.369 | SELECT "dishes"."category" AS "category", COUNT(DISTINCT "orders"."id") AS "orders_count", SUM("order_items"."quantity") AS "items_sold", SUM("order_items"."quantity" * "order_items"."unit_price") AS "revenue", AVG("order_items"."quantity" * "order_items"."unit_price") AS "avg_item_value" FROM "order_items" "order_items" INNER JOIN "orders" "orders" ON "order_items"."order_id" = "orders"."id"  INNER JOIN "menu_items" "menu_items" ON "order_items"."menu_item_id" = "menu_items"."id"  INNER JOIN "dishes" "dishes" ON "menu_items"."dish_id" = "dishes"."id" WHERE "orders"."ordered_at" >= $1 AND "orders"."status" != $2 GROUP BY "dishes"."category" ORDER BY "revenue" DESC
+(1 row)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             1.000 |                       1 |                       0 |                          
+(1 row)
+
+
+## EP7 POST /api/orders  http=201  X-Query-Count=7
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                            query                                                                                                                                                                                                                             
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    2.438 |   0.122 |      0.122 | INSERT INTO "order_items"("order_id", "menu_item_id", "quantity", "unit_price", "notes", "status", "created_at", "updated_at") VALUES ($1, $2, $3, $4, $5, $6, DEFAULT, DEFAULT) RETURNING "id", "created_at", "updated_at"
+    20 |    2.248 |   0.112 |      0.112 | INSERT INTO "orders"("table_id", "user_id", "total_price", "ordered_at", "status", "created_at", "updated_at") VALUES ($1, $2, $3, $4, $5, DEFAULT, DEFAULT) RETURNING "id", "total_price", "created_at", "updated_at"
+    20 |    0.889 |   0.044 |      0.044 | UPDATE "orders" SET "total_price" = $1, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = $2
+    20 |    0.362 |   0.018 |      0.018 | SELECT "RestaurantTable"."id" AS "RestaurantTable_id", "RestaurantTable"."table_number" AS "RestaurantTable_table_number", "RestaurantTable"."capacity" AS "RestaurantTable_capacity", "RestaurantTable"."status" AS "RestaurantTable_status", "RestaurantTable"."created_at" AS "RestaurantTable_created_at", "RestaurantTable"."updated_at" AS "RestaurantTable_updated_at" FROM "tables" "RestaurantTable" WHERE (("RestaurantTable"."id" = $1)) LIMIT $2
+    20 |    0.296 |   0.015 |      0.015 | SELECT "MenuItem"."id" AS "MenuItem_id", "MenuItem"."dish_id" AS "MenuItem_dish_id", "MenuItem"."price" AS "MenuItem_price", "MenuItem"."is_available" AS "MenuItem_is_available", "MenuItem"."created_at" AS "MenuItem_created_at", "MenuItem"."updated_at" AS "MenuItem_updated_at" FROM "menu_items" "MenuItem" WHERE (("MenuItem"."id" IN ($1)) AND ("MenuItem"."is_available" = $2))
+    20 |    0.024 |   0.001 |      0.001 | START TRANSACTION
+    20 |    0.011 |   0.001 |      0.001 | COMMIT
+(7 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             7.000 |                       7 |                       2 |                     2.000
+(1 row)
+
+
+## EP8 GET /api/dishes/1/ingredients  http=200  X-Query-Count=1
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                                                                                                                                                      query                                                                                                                                                                                                                                                                                                                                                       
+-------+----------+---------+------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    20 |    0.731 |   0.037 |      0.037 | SELECT "ingredients"."id" AS "ingredients_id", "ingredients"."name" AS "ingredients_name", "ingredients"."unit" AS "ingredients_unit", "ingredients"."created_at" AS "ingredients_created_at", "ingredients"."updated_at" AS "ingredients_updated_at", "dish_ingredients"."dish_id" AS "pivot_dish_id", "dish_ingredients"."ingredient_id" AS "pivot_ingredient_id", dish_ingredients.quantity AS "pivot_quantity", dish_ingredients.created_at AS "pivot_created_at", dish_ingredients.updated_at AS "pivot_updated_at" FROM "ingredients" "ingredients" INNER JOIN "dish_ingredients" "dish_ingredients" ON "ingredients"."id" = "dish_ingredients"."ingredient_id" WHERE "dish_ingredients"."dish_id" IN ($1)
+    20 |    0.417 |   0.021 |      0.021 | SELECT "Dish"."id" AS "Dish_id", "Dish"."name" AS "Dish_name", "Dish"."category" AS "Dish_category", "Dish"."created_at" AS "Dish_created_at", "Dish"."updated_at" AS "Dish_updated_at" FROM "dishes" "Dish" WHERE (("Dish"."id" = $1)) LIMIT $2
+(2 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             2.000 |                       2 |                       0 |                          
+(1 row)
+
+
+## EP9 POST /api/reservations  http=201  X-Query-Count=4
+
+### All tracked statements (including utility statements)
+ calls | total_ms | mean_ms | ms_per_req |                                                                                                                                                                                                                            query                                                                                                                                                                                                                             
+-------+----------+---------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+     1 |    0.014 |   0.014 |      0.014 | SELECT "RestaurantTable"."id" AS "RestaurantTable_id", "RestaurantTable"."table_number" AS "RestaurantTable_table_number", "RestaurantTable"."capacity" AS "RestaurantTable_capacity", "RestaurantTable"."status" AS "RestaurantTable_status", "RestaurantTable"."created_at" AS "RestaurantTable_created_at", "RestaurantTable"."updated_at" AS "RestaurantTable_updated_at" FROM "tables" "RestaurantTable" WHERE (("RestaurantTable"."id" = $1)) LIMIT $2
+     1 |    0.001 |   0.001 |      0.001 | ROLLBACK
+     1 |    0.001 |   0.001 |      0.001 | START TRANSACTION
+(3 rows)
+
+
+### Calls per request by statement class
+ calls_per_request | tracked_statement_forms | utility_statement_forms | utility_calls_per_request 
+-------------------+-------------------------+-------------------------+---------------------------
+             3.000 |                       3 |                       2 |                     2.000
+(1 row)
+
+

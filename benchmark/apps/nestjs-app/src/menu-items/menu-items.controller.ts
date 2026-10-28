@@ -13,4 +13,10 @@ export class MenuItemsController {
   index(@Query('page') page?: string) {
     return this.menuItemsService.index(resolvePage(page));
   }
+
+  // EP2b: GET /api/menu-items/plain (same-table control, no relations)
+  @Get('plain')
+  indexPlain(@Query('page') page?: string) {
+    return this.menuItemsService.indexPlain(resolvePage(page));
+  }
 }

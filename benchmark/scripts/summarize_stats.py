@@ -34,10 +34,10 @@ def bootstrap_rel_delta(lar_vals, nest_vals, rng):
         stats.append(rel_delta_pct(lar, nest))
     return percentile_ci(stats)
 
-def bootstrap_d_k(rows, mode, endpoint, users, rng):
+def bootstrap_d_k(rows, mode, endpoint, users, rng, reference="EP1"):
     groups = {
-        "l1": group_values(rows, mode, "EP1", users, "laravel"),
-        "n1": group_values(rows, mode, "EP1", users, "nestjs"),
+        "l1": group_values(rows, mode, reference, users, "laravel"),
+        "n1": group_values(rows, mode, reference, users, "nestjs"),
         "lk": group_values(rows, mode, endpoint, users, "laravel"),
         "nk": group_values(rows, mode, endpoint, users, "nestjs"),
     }

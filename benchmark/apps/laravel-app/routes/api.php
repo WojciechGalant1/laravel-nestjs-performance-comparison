@@ -23,6 +23,9 @@ Route::middleware(['auth:api', 'count.queries'])->group(function () {
     // EP2: 1 relation
     Route::get('menu-items', [MenuItemController::class, 'index']);
 
+    // EP2b: same-table control for EP2 (0 relations)
+    Route::get('menu-items/plain', [MenuItemController::class, 'indexPlain']);
+
     // EP3: 2 relations (eager)
     Route::get('orders', [OrderController::class, 'index']);
 

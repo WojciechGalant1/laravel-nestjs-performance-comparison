@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-off: X-Query-Count plus all pg_stat_statements entries for EP2/EP1/EP3/EP4/EP5/EP6/EP7/EP8/EP9.
+# One-off: X-Query-Count plus all pg_stat_statements entries for EP1/EP2/EP2b/EP3/EP4/EP5/EP6/EP7/EP8/EP9.
 # Usage: scripts/sql-compare.sh <laravel|nestjs> [repeats]
 set -euo pipefail
 
@@ -53,12 +53,13 @@ out="results/smoke/sql-compare-${framework}.txt"
 } >"$out"
 
 # Warm workers and pools before the measured window.
-for path in "/api/menu-items?page=1" "/api/tables?page=1" "/api/orders?page=1" "/api/orders/1" "/api/dishes/1/ingredients" "/api/dashboard/summary" "/api/orders/1/status" "/api/reservations"; do
+for path in "/api/menu-items?page=1" "/api/menu-items/plain?page=1" "/api/tables?page=1" "/api/orders?page=1" "/api/orders/1" "/api/dishes/1/ingredients" "/api/dashboard/summary" "/api/orders/1/status" "/api/reservations"; do
     hit "$path" >/dev/null
 done
 
 for spec in \
     "EP2 /api/menu-items?page=1" \
+    "EP2b /api/menu-items/plain?page=1" \
     "EP1 /api/tables?page=1" \
     "EP3 /api/orders?page=1" \
     "EP4 /api/orders/1" \
