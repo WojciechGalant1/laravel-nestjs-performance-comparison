@@ -1,8 +1,8 @@
 # Słownik Danych i Struktura Wyników Benchmarku (Data Dictionary)
 
-Kompleksowa dokumentacja schematów danych, formatów telemetrycznych, logów pomiarowych oraz przetworzonych tabel analitycznych w projekcie porównania wydajności frameworków **Laravel** i **NestJS**.
+Kompleksowa dokumentacja schematów danych, formatów telemetrycznych, logów pomiarowych oraz przetworzonych tabel analitycznych w projekcie porównania wydajności frameworków **Laravel 13 (PHP 8.4)** i **NestJS 11 (Node.js 24 LTS)**.
 
-Dokument definiuje architekturę katalogu wyników `results/`, zasady nazewnictwa oraz pełną specyfikację semantyczną każdej kolumny i właściwości w plikach CSV oraz JSON generowanych przez narzędzia Apache JMeter, Docker Engine oraz skrypty analityczne Python.
+Dokument definiuje architekturę katalogu wyników `benchmark/results/`, zasady nazewnictwa oraz pełną specyfikację semantyczną każdej kolumny i właściwości w plikach CSV oraz JSON generowanych przez narzędzia Apache JMeter, Docker Engine oraz skrypty analityczne Python.
 
 ---
 
@@ -19,23 +19,22 @@ Dokument definiuje architekturę katalogu wyników `results/`, zasady nazewnictw
    - [Tabela zbiorcza i agregacje statystyczne: `summary.csv`](#tabela-zbiorcza-i-agregacje-statystyczne-summarycsv)
 5. [Pliki Pomocnicze i Diagnostyczne](#5-pliki-pomocnicze-i-diagnostyczne)
    - [Parametry wejściowe JMeter: `ranges.properties` i `available_menu_items.csv`](#parametry-wejściowe-jmeter)
-   - [Raporty inspekcji ORM: `sql-compare` i `query-count`](#raporty-inspekcji-orm)
+   - [Raporty inspekcji ORM i eksperymenty pilotażowe](#raporty-inspekcji-orm-i-eksperymenty-pilotażowe)
 
 ---
 
 ## 1. Hierarchia i Struktura Katalogu Wyników (`results/`)
 
-Wszystkie artefakty generowane w trakcie wykonywania eksperymentu zapisywane są w ścisłym drzewie katalogów, gwarantującym pełną separację scenariuszy, frameworków, punktów końcowych, poziomów obciążenia oraz niezależnych powtórzeń ($n = 10$).
+Wszystkie artefakty generowane w trakcie wykonywania eksperymentu zapisywane są w ścisłym drzewie katalogów w [`benchmark/results/`](file:///home/wojtek/projekty/badanie/benchmark/results/), gwarantującym pełną separację scenariuszy, frameworków, punktów końcowych, poziomów obciążenia oraz niezależnych powtórzeń ($n = 10$).
 
 ```
-results/
-├── s1/                                 # Katalog scenariusza (s1, s2, s2-pool1, s3)
+benchmark/results/
+├── s1/                                 # Scenariusz S1: Baseline CRUD (EP1, EP5 @ 1, 2, 4, 10 VU, n=10)
 │   ├── runs.csv                        # Przetworzone dane ze wszystkich n=10 powtórzeń (summarize.py)
 │   ├── summary.csv                     # Zagregowane mediany i odchylenia standardowe (summarize.py)
-│   │
 │   ├── laravel/                        # Podkatalog frameworka (laravel / nestjs)
-│   │   └── EP1/                        # Podkatalog badanego endpointu (EP1 .. EP10)
-│   │       ├── vu1/                    # Poziom współbieżności wirtualnych użytkowników (vu1, vu2, ...)
+│   │   └── EP1/                        # Podkatalog badanego endpointu
+│   │       ├── vu1/                    # Poziom współbieżności wirtualnych użytkowników (vu1, vu2, vu4, vu10)
 │   │       │   ├── rep01/              # Pojedyncze powtórzenie pomiarowe (rep01 .. rep10)
 │   │       │   │   ├── results.jtl     # Surowy ślad zapytań HTTP zarejestrowany przez JMeter (CSV)
 │   │       │   │   ├── stats.csv       # Ślad telemetryczny zużycia CPU i RAM z docker stats (CSV)
@@ -44,17 +43,21 @@ results/
 │   │       │   │   └── jmeter.log      # Dziennik zdarzeń silnika Apache JMeter
 │   │       │   ├── ...
 │   │       │   └── rep10/
-│   │       └── vu2/
-│   │           └── ...
-│   └── nestjs/
-│       └── ...
-├── s2/
-├── s2-pool1/
-├── s3/
-└── smoke/                              # Wyniki testów dymnych i weryfikacji integralności
-    ├── sql-compare-laravel.txt
-    ├── sql-compare-nestjs.txt
-    └── golden-write-*.json
+│   │       └── vu2/ ...
+│   └── nestjs/ ...
+├── s2/                                 # Scenariusz S2: Scalability & Stress (EP3, EP7 @ 200, 500, 1000 VU, n=10)
+├── s2-pool1/                           # Kontrola wrażliwości S2: NestJS DB_POOL_SIZE=1 (4 połączenia, n=10)
+├── s3/                                 # Scenariusz S3: Relational Complexity (EP2b, EP2, EP4, EP6, n=10)
+├── s3_backup_legacy/                   # Archiwalna seria S3 (n=10) z punktem odniesienia EP1 i pełnym zakresem 1–10 VU
+└── smoke/                              # Wyniki badań pilotażowych, profilowania SQL i strojenia parametrów
+    ├── s1-h1-pilot-20261005/           # Pilotaż S1 (EP1, EP2, EP8 @ 1, 2, 4, 10 VU, n=1)
+    ├── s2-h2-pilot-20261006/           # Pilotaż S2 (EP3, EP7 @ 200, 500, 1000 VU, n=1)
+    ├── s2-pool1-pilot-20261006/        # Pilotaż S2-pool1 (DB_POOL_SIZE=1 @ 200, 500, 1000 VU, n=1)
+    ├── s3-h3-pilot-20261007/           # Pilotaż S3 (EP1, EP4, EP5-pivot, EP6 @ 1, 2, 4, 10 VU, n=1)
+    ├── s2-fpm-pilot/                   # Siatka strojenia PHP-FPM: pm.max_children in {4,8,16,24,32,40} (24 biegi)
+    ├── sql-compare-laravel.txt         # Profilowanie pg_stat_statements (czasy SQL na instrukcję) dla Laravela
+    ├── sql-compare-nestjs.txt          # Profilowanie pg_stat_statements (czasy SQL na instrukcję) dla NestJS
+    └── ep8-diagnostic-20261006.txt     # Diagnostyka asymetrii zapisu PATCH /api/orders/{id}/status
 ```
 
 ---
@@ -65,16 +68,16 @@ Poniższa tabela objaśnia skróty, tokeny i reguły nazewnicze stosowane w stru
 
 | Segment / Wzorzec | Przykłady | Znaczenie semantyczne |
 | :--- | :--- | :--- |
-| `<scenario>` | `s1`, `s2`, `s2-pool1`, `s3` | **Identyfikator scenariusza badawczego:**<br>• `s1`: Baseline CRUD (niskie obciążenie, 1 i 2 VU; EP1, EP5)<br>• `s2`: Stres i skalowalność współbieżna (200, 500, 1000 VU; EP3, EP7)<br>• `s2-pool1`: Wariant kontrolny NestJS z rozmiarem puli połączeń równym 1<br>• `s3`: Złożoność relacyjna i podatność ORM (1 i 2 VU; EP1, EP2 oraz EP4, EP6) |
-| `<framework>` | `laravel`, `nestjs` | **Badany stos technologiczny:**<br>• `laravel`: PHP 8.4 + OPcache/JIT + PHP-FPM + Eloquent<br>• `nestjs`: Node.js 24 + PM2 Cluster + TypeORM |
-| `<endpoint>` | `EP0` .. `EP9` | **Identyfikator badanego punktu końcowego API:**<br>• `EP0`: Uwierzytelnienie i wydanie JWT (`POST /auth/login`, `GET /auth/me`) *[Artykuł + Praca mgr]*<br>• `EP1`: Prosty odczyt tabeli słownikowej (`GET /tables`) *[Artykuł + Praca mgr]*<br>• `EP2`: Odczyt kolekcji z relacją 1:N (`GET /menu-items`) *[Artykuł + Praca mgr]*<br>• `EP3`: Wyszukiwanie i stronicowanie z 2 relacjami (`GET /orders`) *[Artykuł + Praca mgr]*<br>• `EP4`: Zagnieżdżony odczyt 3-poziomowy (`GET /orders/{id}`) *[Artykuł + Praca mgr]*<br>• `EP5`: Prosta modyfikacja in-place (`PATCH /orders/{id}/status`) *[Artykuł + Praca mgr]*<br>• `EP6`: Agregacja analityczna SQL 3x JOIN (`GET /dashboard/summary`) *[Artykuł + Praca mgr]*<br>• `EP7`: Złożony zapis transakcyjny (`POST /orders`) *[Artykuł + Praca mgr]*<br>• `EP8`: Relacja N:M przez tabelę asocjacyjną (`GET /dishes/{id}/ingredients`) *[Wyłącznie Praca mgr]*<br>• `EP9`: Zapis ze złożonym indeksem GiST (`POST /reservations`) *[Wyłącznie Praca mgr]* |
-| `vu<N>` | `vu1`, `vu2`, `vu4`, `vu10`, `vu200`, `vu500`, `vu1000` | **Współbieżność (Virtual Users):** Liczba równoległych wątków roboczych symulowanych przez generator JMeter. |
+| `<scenario>` | `s1`, `s2`, `s2-pool1`, `s2-fpm8`, `s3` | **Identyfikator scenariusza badawczego:**<br>• `s1`: Baseline CRUD (1, 2, 4, 10 VU; werdykt H1 przy 1 i 2 VU na `EP1`, `EP5`)<br>• `s2`: Skalowalność i stres współbieżny (200, 500, 1000 VU; `EP3`, `EP7`)<br>• `s2-pool1`: Seria kontrolna wrażliwości NestJS z `DB_POOL_SIZE=1` (4 połączenia łącznie)<br>• `s2-fpm8`: Seria kontrolna wrażliwości Laravel z `PM_MAX_CHILDREN=8` (8 workerów PHP-FPM)<br>• `s3`: Złożoność relacyjna i narzut ORM (1 i 2 VU; baseline `EP2b`, werdykt `EP2`, obserwacje `EP4`, `EP6`) |
+| `<framework>` | `laravel`, `nestjs` | **Badany stos technologiczny:**<br>• `laravel`: PHP 8.4 + OPcache/JIT + PHP-FPM + Eloquent ORM<br>• `nestjs`: Node.js 24 LTS + PM2 Cluster (4 instancje) + TypeORM |
+| `<endpoint>` | `EP0` .. `EP9`, `EP2b` | **Identyfikator badanego punktu końcowego API:**<br>• `EP0`: Uwierzytelnienie i wydanie JWT (`POST /api/auth/login`) *[Artykuł + Praca mgr]*<br>• `EP1`: Prosty odczyt tabeli słownikowej (`GET /api/tables`) *[Artykuł + Praca mgr]*<br>• `EP2`: Odczyt kolekcji z 1 relacją eager load (`GET /api/menu-items`) *[Artykuł + Praca mgr]*<br>• `EP2b`: Punkt odniesienia *same-table baseline* bez relacji (`GET /api/menu-items/plain`) *[Artykuł + Praca mgr]*<br>• `EP3`: Stronicowanie zamówień z 2 relacjami (`GET /api/orders`) *[Artykuł + Praca mgr]*<br>• `EP4`: Zagnieżdżony odczyt 3-poziomowy (`GET /api/orders/{id}`) *[Artykuł + Praca mgr]*<br>• `EP5`: Prosta modyfikacja in-place (`PATCH /api/orders/{id}/status`) *[Artykuł + Praca mgr]*<br>• `EP6`: Agregacja analityczna SQL 3x JOIN (`GET /api/dashboard/summary`) *[Artykuł + Praca mgr]*<br>• `EP7`: Złożony zapis transakcyjny (`POST /api/orders`) *[Artykuł + Praca mgr]*<br>• `EP8`: Relacja N:M przez tabelę asocjacyjną (`GET /api/dishes/{id}/ingredients`) *[Praca mgr]*<br>• `EP9`: Zapis z blokadą i indeksem GiST (`POST /api/reservations`) *[Praca mgr]* |
+| `vu<N>` | `vu1`, `vu2`, `vu4`, `vu10`, `vu200`, `vu500`, `vu1000` | **Współbieżność (Virtual Users):** Liczba równoległych wątków roboczych symulowanych przez generator JMeter w pętli zamkniętej. |
 | `rep<NN>` | `rep01` .. `rep10` | **Numer powtórzenia:** Dwucyfrowy identyfikator niezależnego biegu pomiarowego w serii ($n=10$). |
 | `results.jtl` | `results.jtl` | Surowy log próbek HTTP wygenerowany przez Apache JMeter w formacie CSV. |
 | `stats.csv` | `stats.csv` | Log telemetrii zasobów systemowych rejestrowany przez `docker stats` co $\sim 0.5$ s. |
-| `meta.json` | `meta.json` | Środowiskowy rekord JSON z parametrami biegu, commitami Git i weryfikacją bazy. |
-| `runs.csv` | `runs.csv` | Spłaszczona tabela wszystkich pojedynczych biegów pomiarowych po odrzuceniu ramp-upu. |
-| `summary.csv` | `summary.csv` | Tabela zagregowanych median i odchyleń standardowych ($n=10$) dla scenariusza. |
+| `meta.json` | `meta.json` | Środowiskowy rekord JSON z parametrami biegu, commitami Git i weryfikacją bramek integralności. |
+| `runs.csv` | `runs.csv` | Spłaszczona tabela wszystkich pojedynczych biegów pomiarowych po odrzuceniu ramp-upu (10 s). |
+| `summary.csv` | `summary.csv` | Tabela zagregowanych median i odchyleń standardowych ($n=10$) dla danego scenariusza. |
 
 ---
 
@@ -82,20 +85,20 @@ Poniższa tabela objaśnia skróty, tokeny i reguły nazewnicze stosowane w stru
 
 ### Surowy ślad próbkowania JMeter: `results.jtl`
 
-Plik generowany w trybie bezgłowym (CLI) przez Apache JMeter. Zapisywany jako plik CSV z nagłówkiem (zgodnie z konfiguracją w [`benchmark/jmeter/run.properties`](file:///home/user/projekty/badanie/benchmark/jmeter/run.properties)).
+Plik generowany w trybie bezgłowym (CLI) przez Apache JMeter. Zapisywany jako plik CSV z nagłówkiem (zgodnie z konfiguracją w [`benchmark/jmeter/run.properties`](file:///home/wojtek/projekty/badanie/benchmark/jmeter/run.properties)).
 
 | Kolumna | Typ danych | Jednostka | Opis |
 | :--- | :--- | :--- | :--- |
 | `timeStamp` | Liczba całkowita | ms (epoch) | Znacznik czasu uniksowego (w milisekundach) rozpoczęcia żądania HTTP. |
-| `elapsed` | Liczba całkowita | ms | Całkowity czas obsługi żądania (czas od wysłania pierwszego bajtu do odebrania ostatniego bajtu odpowiedzi). |
-| `label` | Ciąg znaków | - | Identyfikator samplera JMeter (np. `EP1`, `EP2`, lub techniczny `SETUP_login`). |
+| `elapsed` | Liczba całkowita | ms | Całkowity czas obsługi żądania (od wysłania pierwszego bajtu do odebrania ostatniego bajtu odpowiedzi). |
+| `label` | Ciąg znaków | - | Identyfikator samplera JMeter (np. `EP1`, `EP2`, `EP2b` lub techniczny `SETUP_login`). |
 | `responseCode` | Ciąg znaków | - | Kod statusu odpowiedzi HTTP (np. `200`, `201`, `400`, `401`, `404`, `500`). |
-| `responseMessage` | Ciąg znaków | - | Komunikat tekstowy powiązany ze statusem HTTP (np. `OK`, `Created`, `Unauthorized`). |
+| `responseMessage` | Ciąg znaków | - | Komunikat tekstowy powiązany ze statusem HTTP (np. `OK`, `Created`). |
 | `success` | Wartość logiczna | - | Flaga powodzenia asercji i kodu odpowiedzi (`true` dla poprawnych kodów HTTP, `false` w przypadku błędu). |
 | `failureMessage` | Ciąg znaków | - | Treść komunikatu błędu w przypadku niepowodzenia asercji odpowiedzi JMeter. |
 | `bytes` | Liczba całkowita | bajty | Całkowity rozmiar odebranej treści odpowiedzi HTTP (nagłówki + ciało odpowiedzi). |
-| `Latency` | Liczba całkowita | ms | Czas do pierwszego bajtu (TTFB – *Time to First Byte*), czyli czas oczekiwania na rozpoczęcie transmisji zwrotnej. |
-| `Connect` | Liczba całkowita | ms | Czas nawiązania połączenia sieciowego TCP (w tym ewentualny handshake). |
+| `Latency` | Liczba całkowita | ms | Czas do pierwszego bajtu (TTFB – *Time to First Byte*). |
+| `Connect` | Liczba całkowita | ms | Czas nawiązania połączenia sieciowego TCP. |
 | `allThreads` | Liczba całkowita | - | Łączna liczba aktywnych wątków (wirtualnych użytkowników) we wszystkich grupach testowych. |
 | `grpThreads` | Liczba całkowita | - | Liczba aktywnych wątków w bieżącej grupie testowej JMeter. |
 
@@ -103,14 +106,14 @@ Plik generowany w trybie bezgłowym (CLI) przez Apache JMeter. Zapisywany jako p
 
 ### Telemetria zasobów Docker: `stats.csv`
 
-Plik tworzony w tle przez pętlę strumieniującą polecenia `docker stats --format '{{json .}}'` w skrypcie [`run-scenario.sh`](file:///home/user/projekty/badanie/benchmark/scripts/run-scenario.sh). Monitoruje kontenery aplikacji (`laravel`/`nestjs`), serwer proxy (`nginx`), bazę (`postgres`) oraz generator (`jmeter`).
+Plik tworzony w tle przez pętlę strumieniującą polecenia `docker stats` w skrypcie [`run-scenario.sh`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh). Monitoruje kontenery aplikacji (`laravel-app`/`nestjs-app`), serwer proxy (`nginx`), bazę (`postgres`) oraz generator (`jmeter`).
 
 | Kolumna | Typ danych | Jednostka | Opis |
 | :--- | :--- | :--- | :--- |
-| `epoch` | Liczba zmiennoprzecinkowa | sekundy | Znacznik czasu uniksowego WSL (`$EPOCHREALTIME`) z dokładnością do mikrosekund w momencie odczytu próbki. |
-| `name` | Ciąg znaków | - | Nazwa monitorowanego kontenera Docker (np. `benchmark-laravel-1`, `benchmark-postgres-1`). |
-| `cpu_perc` | Liczba zmiennoprzecinkowa | % | Chwilowe zużycie procesora przez kontener (100% oznacza pełne wykorzystanie 1 logicznego rdzenia vCPU). |
-| `mem_usage` | Ciąg znaków | format sufiksowy | Bieżące zużycie pamięci operacyjnej z jednostką (np. `85.4MiB`, `1.2GiB`). Przeliczane automatycznie na MiB. |
+| `epoch` | Liczba zmiennoprzecinkowa | sekundy | Znacznik czasu uniksowego (`$EPOCHREALTIME`) z dokładnością do mikrosekund w momencie odczytu próbki. |
+| `name` | Ciąg znaków | - | Nazwa monitorowanego kontenera Docker. |
+| `cpu_perc` | Liczba zmiennoprzecinkowa | % | Chwilowe zużycie procesora przez kontener (100% oznacza pełne wykorzystanie 1 logicznego rdzenia vCPU; limit 4 vCPU = 400%). |
+| `mem_usage` | Ciąg znaków | format sufiksowy | Bieżące zużycie pamięci operacyjnej z jednostką (np. `50.8MiB`, `690.4MiB`). Przeliczane automatycznie na MiB. |
 | `mem_limit` | Ciąg znaków | format sufiksowy | Przydzielony kontenerowi limit pamięci cgroups (np. `2GiB`). |
 | `mem_perc` | Liczba zmiennoprzecinkowa | % | Procentowe wykorzystanie przydzielonego limitu pamięci RAM kontenera. |
 
@@ -124,39 +127,40 @@ Kluczowy dokument JSON generowany na zakończenie każdego powtórzenia pomiarow
 | :--- | :--- | :--- | :--- |
 | `status` | string | `"complete"` | Status wykonania przebiegu (`"complete"` oznacza bieg prawidłowy i uwzględniany w analizie). |
 | `framework` | string | `"laravel"` | Nazwa badanego frameworka (`"laravel"` lub `"nestjs"`). |
-| `scenario` | string | `"s1"` | Identyfikator scenariusza testowego (`"s1"`, `"s2"`, `"s2-pool1"`, `"s3"`). |
-| `endpoint` | string | `"EP1"` | Badany punkt końcowy (lub `"all"` w planach zbiorczych). |
-| `mode` | string | `"single"` | Tryb wykonania planu testowego (`"single"` lub `"mixed"`). |
+| `scenario` | string | `"s1"` | Identyfikator scenariusza testowego (`"s1"`, `"s2"`, `"s3"`). |
+| `endpoint` | string | `"EP1"` | Badany punkt końcowy (`"EP1"`, `"EP2"`, `"EP2b"`, `"EP3"`, `"EP4"`, `"EP5"`, `"EP6"`, `"EP7"`). |
+| `mode` | string | `"isolated"` | Tryb wykonania planu testowego (`"isolated"` – każdy endpoint i framework testowany w pełnej izolacji). |
 | `users` | int | `1` | Liczba wirtualnych użytkowników (VU) w badanym biegu. |
 | `repetition` | int | `1` | Numer powtórzenia pomiarowego ($1..10$). |
 | `rampup_s` | int | `10` | Czas rozruchu wątków JMeter w sekundach (okres odrzucany podczas analizy). |
-| `warmup_s` | int | `60` | Czas trwania rozgrzewki kontenera w sekundach (próbki nie trafiają do `results.jtl`). |
-| `duration_s` | int | `60` | Całkowity zaplanowany czas trwania pomiaru właściwego w sekundach. |
+| `warmup_s` | int | `60` | Czas trwania rozgrzewki kontenera w sekundach (60 s dla S1/S3, 120 s dla S2). |
+| `duration_s` | int | `60` | Całkowity zaplanowany czas trwania pomiaru właściwego w sekundach (60 s dla S1/S3, 120 s dla S2). |
 | `measurement_started` | float | `1776000000.123` | Znacznik czasu uniksowego (sekundy) rozpoczęcia właściwego okna pomiarowego. |
 | `measurement_finished`| float | `1776000060.456` | Znacznik czasu uniksowego (sekundy) zakończenia okna pomiarowego. |
 | `clock_offset_s` | float | `0.002` | Zmierzona różnica zegara systemowego pomiędzy środowiskiem hosta a kontenerami Docker. |
 | `app_cpus` | float | `4.0` | Efektywny przydział rdzeni vCPU dla kontenera aplikacji odczytany z cgroups. |
 | `postgres_cpus` | float | `4.0` | Efektywny przydział rdzeni vCPU dla kontenera PostgreSQL odczytany z cgroups. |
 | `app_memory_mib` | float | `2048.0` | Limit pamięci RAM kontenera aplikacji w MiB odczytany przez `docker inspect`. |
-| `db_pool_size` | string | `"10"` | Rozmiar puli połączeń do bazy danych skonfigurowany w środowisku aplikacji. |
+| `db_pool_size` | string | `"10"` | Rozmiar puli połączeń do bazy danych skonfigurowany w środowisku NestJS (`"10"` lub `"1"`). |
+| `pm_max_children` | string | `"4"` | Liczba procesów roboczych PHP-FPM skonfigurowana w środowisku Laravel (`"4"` lub `"8"`..`"40"`). |
 | `app_image` | string | `"sha256:abc..."` | Pełny identyfikator SHA256 skompilowanego obrazu kontenera aplikacji. |
 | `interleave_seed` | int | `20261002` | Bazowe ziarno generatora pseudolosowego przeplotu frameworków. |
 | `framework_order` | string | `"laravel nestjs"` | Rzeczywista kolejność uruchomienia frameworków w danym powtórzeniu. |
 | `git_commit` | string | `"f3a8b2..."` | Hash commita Git repozytorium w momencie wykonania biegu. |
-| `laravel_app_tree` | string | `"d41d8c..."` | Suma kontrolna drzewa katalogu `apps/laravel-app` (wykrywa jakiekolwiek modyfikacje kodu). |
+| `laravel_app_tree` | string | `"d41d8c..."` | Suma kontrolna drzewa katalogu `apps/laravel-app`. |
 | `nestjs_app_tree` | string | `"e2fc71..."` | Suma kontrolna drzewa katalogu `apps/nestjs-app`. |
 | `integrity_gate` | string | `"pass"` | Wynik weryfikacji bramki integralności bazy danych (`"pass"` / `"fail"`). |
-| `warmup_201` | int | `125` | Liczba pomyślnych odpowiedzi HTTP 201 zarejestrowana w fazie rozgrzewki. |
-| `measurement_201` | int | `5432` | Liczba pomyślnych odpowiedzi HTTP 201 zarejestrowana w fazie pomiarowej. |
-| `expected_order_rows` | int | `5557` | Oczekiwana liczba wierszy w tabeli `orders` po wykonaniu biegu (warmup + pomiar). |
-| `expected_order_item_rows`| int | `16671` | Oczekiwana liczba pozycji w tabeli `order_items` (stosunek 1:1 z payloada). |
-| `row_counts` | object | `{...}` | Rzeczywista liczba wierszy w kluczowych tabelach bazy danych odczytana po zakończeniu biegu. |
+| `warmup_201` | int | `125` | Liczba pomyślnych odpowiedzi HTTP 201 zarejestrowana w fazie rozgrzewki (dla EP7). |
+| `measurement_201` | int | `5432` | Liczba pomyślnych odpowiedzi HTTP 201 zarejestrowana w fazie pomiarowej (dla EP7). |
+| `expected_order_rows` | int | `105557` | Oczekiwana liczba wierszy w tabeli `orders` po wykonaniu biegu (`100000` + warmup + pomiar). |
+| `expected_order_item_rows`| int | `305252` | Oczekiwana liczba pozycji w tabeli `order_items` (`299695` + warmup + pomiar). |
+| `row_counts` | object | `{...}` | Rzeczywista liczba wierszy w tabelach (`orders`, `order_items`, `reservations`) odczytana po zakończeniu biegu. |
 
 ---
 
 ## 4. Formaty Danych Przetworzonych (Pipeline Analityczny)
 
-Pliki generowane przez skrypt [`benchmark/scripts/summarize.py`](file:///home/user/projekty/badanie/benchmark/scripts/summarize.py) w katalogu każdego scenariusza (`results/<scenario>/`).
+Pliki generowane przez skrypt [`benchmark/scripts/summarize.py`](file:///home/wojtek/projekty/badanie/benchmark/scripts/summarize.py) w katalogu każdego scenariusza (`results/<scenario>/`).
 
 ### Tabela pojedynczych powtórzeń: `runs.csv`
 
@@ -165,56 +169,56 @@ Zawiera znormalizowane metryki wyliczone dla każdego powtórzenia ($n = 1..10$)
 | Nazwa kolumny | Typ | Jednostka | Opis i sposób wyznaczenia |
 | :--- | :--- | :--- | :--- |
 | `scenario` | string | - | Identyfikator scenariusza (`s1`, `s2`, `s2-pool1`, `s3`). |
-| `mode` | string | - | Tryb testu (`single` dla testów izolowanych endpointów, `mixed` dla wielowątkowych). |
+| `mode` | string | - | Tryb testu (`isolated`). |
 | `framework` | string | - | Badana technologia (`laravel` lub `nestjs`). |
-| `endpoint` | string | - | Etykieta punktu końcowego (`EP1` .. `EP10`). |
+| `endpoint` | string | - | Etykieta punktu końcowego (`EP1`, `EP2`, `EP2b`, `EP3`, `EP4`, `EP5`, `EP6`, `EP7`, `EP8`). |
 | `users` | int | - | Liczba wirtualnych użytkowników VU. |
 | `repetition` | int | - | Numer powtórzenia ($1..10$). |
 | `samples` | int | - | Liczba zarejestrowanych zapytań w oknie stabilnym. |
-| `window_s` | float | sekundy | Rzeczywisty czas trwania analizowanego okna pomiarowego. |
+| `window_s` | float | sekundy | Rzeczywisty czas trwania analizowanego okna pomiarowego (`duration_s - rampup_s`). |
 | `p50_ms` | int / float| ms | Mediana czasu odpowiedzi (50. percentyl) wyznaczona metodą nearest-rank. |
 | `mean_ms` | float | ms | Średnia arytmetyczna czasów odpowiedzi w oknie. |
-| `p95_ms` | int / float| ms | 95. percentyl czasu odpowiedzi (kluczowa metryka jakościowa SLA). |
+| `p95_ms` | int / float| ms | 95. percentyl czasu odpowiedzi (główna metryka decyzyjna hipotez H1, H2, H3). |
 | `p99_ms` | int / float| ms | 99. percentyl czasu odpowiedzi (analiza ogona rozkładu opóźnień). |
 | `throughput_rps` | float | req/s | Rzeczywista przepustowość: $\text{RPS} = \text{liczba sukcesów} / \text{window\_s}$. |
 | `error_rate_pct` | float | % | Odsetek żądań zakończonych błędem HTTP lub przekroczeniem limitu czasu: $100 \times \frac{\text{błędy}}{\text{próbki}}$. |
-| `little_ms` | float | ms | Teoretyczny średni czas odpowiedzi wyznaczony z Prawa Little'a: $R = \frac{N}{X} \times 1000$. Omija błąd dyskretyzacji 1 ms JMetera. |
-| `cpu_per_request_ms` | float | ms CPU | Średni koszt procesora przypadający na jedno obsłużone żądanie: $\frac{\text{app\_cpu\_mean}}{100} \times \frac{1000}{\text{RPS}}$. |
-| `app_cpu_mean` | float | % | Średnie zużycie procesora kontenera aplikacji w oknie pomiarowym (skala 100% = 1 vCPU). |
+| `little_ms` | float | ms | Teoretyczny średni czas odpowiedzi z Prawa Little'a: $R = \frac{N}{X} \times 1000$. Omija kwantyzację 1 ms JMetera. |
+| `cpu_per_request_ms` | float | ms CPU | Znormalizowany jednordzeniowy koszt procesora na 1 żądanie: $\frac{\text{app\_cpu\_mean}}{100} \times \frac{1000}{\text{RPS}}$. |
+| `app_cpu_mean` | float | % | Średnie zużycie procesora kontenera aplikacji w oknie pomiarowym (skala 100% = 1 vCPU; max 400%). |
 | `app_cpu_peak` | float | % | Szczytowe chwilowe zużycie procesora kontenera aplikacji. |
-| `app_cpu_share_pct`| float | ułamek (0..1)| Udział obciążenia w całym budżecie CPU kontenera: $\frac{\text{app\_cpu\_mean}}{100 \times \text{cpus}}$. |
+| `app_cpu_share_pct`| float | ułamek (0..1)| Udział obciążenia w całym budżecie CPU kontenera: $\frac{\text{app\_cpu\_mean}}{100 \times \text{cpus}}$ (próg walidacji $< 0.80$). |
 | `app_mem_mean_mib` | float | MiB | Średnie zużycie pamięci RAM kontenera aplikacji w MiB. |
 | `app_mem_peak_mib` | float | MiB | Maksymalne zarejestrowane zużycie pamięci RAM kontenera aplikacji w MiB. |
-| `postgres_cpu_mean`| float | % | Średnie zużycie procesora kontenera PostgreSQL. |
+| `postgres_cpu_mean`| float | % | Średnie zużycie procesora kontenera PostgreSQL (skala 100% = 1 vCPU; max 400%). |
 | `postgres_cpu_peak`| float | % | Szczytowe zużycie procesora kontenera PostgreSQL. |
-| `postgres_cpu_share_pct`| float | ułamek (0..1)| Udział obciążenia w budżecie CPU bazy danych: $\frac{\text{postgres\_cpu\_mean}}{100 \times \text{pg\_cpus}}$. |
+| `postgres_cpu_share_pct`| float | ułamek (0..1)| Udział obciążenia w budżecie CPU bazy danych: $\frac{\text{postgres\_cpu\_mean}}{100 \times \text{pg\_cpus}}$ (próg walidacji $< 0.80$). |
 | `postgres_mem_mean_mib`| float| MiB | Średnie zużycie pamięci RAM serwera PostgreSQL. |
 | `postgres_mem_peak_mib`| float| MiB | Maksymalne zużycie pamięci RAM serwera PostgreSQL. |
-| `nginx_cpu_mean` | float | % | Średnie obciążenie CPU serwera reverse proxy Nginx. |
+| `nginx_cpu_mean` | float | % | Średnie obciążenie CPU serwera reverse proxy Nginx (limit 1 vCPU = 100%). |
 | `nginx_cpu_peak` | float | % | Szczytowe obciążenie CPU serwera Nginx. |
 | `nginx_mem_mean_mib`| float | MiB | Średnie zużycie RAM przez serwer Nginx. |
 | `nginx_mem_peak_mib`| float | MiB | Maksymalne zużycie RAM przez serwer Nginx. |
-| `jmeter_cpu_mean`| float | % | Średnie zużycie procesora generatora JMeter (weryfikacja czy generator nie był wąskim gardłem). |
+| `jmeter_cpu_mean`| float | % | Średnie zużycie procesora generatora JMeter (weryfikacja braku nasycenia generatora). |
 | `jmeter_cpu_peak`| float | % | Szczytowe zużycie procesora generatora JMeter. |
-| `interleave_seed`| int | - | Ziarno użyte do pseudolosowego tasowania frameworków w danym biegu. |
-| `framework_order`| string | - | Rzeczywista kolejność uruchomienia frameworków (`laravel nestjs` lub `nestjs laravel`). |
-| `orders_count` | int | - | Liczba wierszy w tabeli `orders` po wykonaniu biegu (bramka spójności EP7). |
-| `order_items_count`| int | - | Liczba wierszy w tabeli `order_items` po wykonaniu biegu. |
-| `reservations_count`| int | - | Liczba wierszy w tabeli `reservations` po wykonaniu biegu (bramka EP9). |
+| `jmeter_mem_mean_mib`| float | MiB | Średnie zużycie pamięci RAM przez kontener JMeter. |
+| `jmeter_mem_peak_mib`| float | MiB | Szczytowe zużycie pamięci RAM przez kontener JMeter. |
+| `orders_count` | int | - | Liczba wierszy w tabeli `orders` po wykonaniu biegu (bazowo `100000`). |
+| `order_items_count`| int | - | Liczba wierszy w tabeli `order_items` po wykonaniu biegu (bazowo `299695`). |
+| `reservations_count`| int | - | Liczba wierszy w tabeli `reservations` po wykonaniu biegu (bazowo `100000`). |
 
 ---
 
 ### Tabela zbiorcza i agregacje statystyczne: `summary.csv`
 
-Zawiera zsyntetyzowane statystyki ze wszystkich $n = 10$ powtórzeń dla każdego unikalnego układu eksperymentalnego. Dla każdej metryki numerycznej wyznaczana jest **mediana** (jako miara tendencji centralnej odporna na obserwacje odstające) oraz **odchylenie standardowe** (jako miara stabilności i powtarzalności środowiska).
+Zawiera zsyntetyzowane statystyki ze wszystkich $n = 10$ powtórzeń dla każdego unikalnego układu eksperymentalnego. Dla każdej metryki numerycznej wyznaczana jest **mediana** (`*_median`, miara tendencji centralnej odporna na obserwacje odstające) oraz **odchylenie standardowe** (`*_sd`, miara rozrzutu między powtórzeniami).
 
 #### Klucze grupujące w `summary.csv`:
 - `scenario`: Identyfikator scenariusza (`s1`, `s2`, `s2-pool1`, `s3`).
-- `mode`: Tryb badania (`single`, `mixed`).
+- `mode`: Tryb badania (`isolated`).
 - `framework`: Nazwa technologii (`laravel`, `nestjs`).
-- `endpoint`: Badany punkt końcowy (`EP1` .. `EP10`).
+- `endpoint`: Badany punkt końcowy (`EP1`, `EP2`, `EP2b`, `EP3`, `EP4`, `EP5`, `EP6`, `EP7`, `EP8`).
 - `users`: Poziom współbieżności wirtualnych użytkowników VU.
-- `repetitions`: Liczba uwzględnionych udanych powtórzeń (nominalnie $10$).
+- `repetitions`: Liczba uwzględnionych udanych powtórzeń (w serii głównej $10$, w pilotażach $1$).
 
 #### Zestawienie zagregowanych par metryk (`*_median`, `*_sd`):
 
@@ -223,11 +227,11 @@ Zawiera zsyntetyzowane statystyki ze wszystkich $n = 10$ powtórzeń dla każdeg
 | **Opóźnienia odpowiedzi** | `p50_ms_median`, `p50_ms_sd`<br>`mean_ms_median`, `mean_ms_sd`<br>`p95_ms_median`, `p95_ms_sd`<br>`p99_ms_median`, `p99_ms_sd` | ms | Podstawa weryfikacji hipotez H1, H2 i H3. Miara opóźnienia i stabilności ogona rozkładu SLA. |
 | **Opóźnienie ciągłe** | `little_ms_median`, `little_ms_sd` | ms | Estymacja czasu przebywania w systemie wg Prawa Little'a ($R \approx N/X$). |
 | **Przepustowość** | `throughput_rps_median`, `throughput_rps_sd` | req/s | Wydajność przetwarzania; weryfikacja liniowości skalowania w warunkach niskiego obciążenia. |
-| **Niezawodność** | `error_rate_pct_median`, `error_rate_pct_sd` | % | Wskaźnik błędów HTTP/timeoutów; warunek wstępny ważności testu ($< 1.0\%$). |
-| **Koszt obliczeniowy**| `cpu_per_request_ms_median`, `cpu_per_request_ms_sd` | ms CPU | Zużycie czasu procesora na obsługę 1 żądania (efektywność kodu niezależna od kolejkowania). |
-| **Zasoby aplikacji** | `app_cpu_mean_median`, `app_cpu_mean_sd`<br>`app_cpu_peak_median`, `app_cpu_peak_sd`<br>`app_cpu_share_pct_median`, `app_cpu_share_pct_sd`<br>`app_mem_mean_mib_median`, `app_mem_mean_mib_sd`<br>`app_mem_peak_mib_median`, `app_mem_peak_mib_sd` | % / MiB | Narzut frameworka na zasoby serwera; weryfikacja reguły CPU $< 80\%$ (Low-Load Validity Rule). |
-| **Zasoby bazy danych**| `postgres_cpu_mean_median`, `postgres_cpu_mean_sd`<br>`postgres_cpu_peak_median`, `postgres_cpu_peak_sd`<br>`postgres_cpu_share_pct_median`, `postgres_cpu_share_pct_sd`<br>`postgres_mem_mean_mib_median`, `postgres_mem_mean_mib_sd`<br>`postgres_mem_peak_mib_median`, `postgres_mem_peak_mib_sd` | % / MiB | Obciążenie bazy PostgreSQL; gwarancja braku saturacji warstwy persystencji. |
-| **Zasoby proxy Nginx**| `nginx_cpu_mean_median`, `nginx_cpu_mean_sd`<br>`nginx_mem_mean_mib_median`, `nginx_mem_mean_mib_sd` | % / MiB | Weryfikacja transparentności warstwy reverse proxy. |
+| **Niezawodność** | `error_rate_pct_median`, `error_rate_pct_sd` | % | Wskaźnik błędów HTTP/timeoutów; warunek wstępny ważności testu ($< 1.0\%$; w badaniu $0.000\%$). |
+| **Koszt obliczeniowy**| `cpu_per_request_ms_median`, `cpu_per_request_ms_sd` | ms CPU | Zużycie czasu pojedynczego rdzenia procesora na obsługę 1 żądania. |
+| **Zasoby aplikacji** | `app_cpu_mean_median`, `app_cpu_mean_sd`<br>`app_cpu_peak_median`, `app_cpu_peak_sd`<br>`app_cpu_share_pct_median`, `app_cpu_share_pct_sd`<br>`app_mem_mean_mib_median`, `app_mem_mean_mib_sd`<br>`app_mem_peak_mib_median`, `app_mem_peak_mib_sd` | % / MiB | Narzut frameworka na zasoby serwera; weryfikacja reguły CPU $< 80\%$ (*Low-Load Validity Rule*). |
+| **Zasoby bazy danych**| `postgres_cpu_mean_median`, `postgres_cpu_mean_sd`<br>`postgres_cpu_peak_median`, `postgres_cpu_peak_sd`<br>`postgres_cpu_share_pct_median`, `postgres_cpu_share_pct_sd`<br>`postgres_mem_mean_mib_median`, `postgres_mem_mean_mib_sd`<br>`postgres_mem_peak_mib_median`, `postgres_mem_peak_mib_sd` | % / MiB | Obciążenie bazy PostgreSQL; identyfikacja stanów *database-bound* (EP3, EP6). |
+| **Zasoby Nginx i JMeter**| `nginx_cpu_mean_median`, `nginx_mem_mean_mib_median`<br>`jmeter_cpu_mean_median`, `jmeter_mem_peak_mib_median` | % / MiB | Dowód braku nasycenia warstwy proxy oraz generatora obciążenia. |
 
 ---
 
@@ -235,27 +239,33 @@ Zawiera zsyntetyzowane statystyki ze wszystkich $n = 10$ powtórzeń dla każdeg
 
 ### Parametry wejściowe JMeter
 
-Pliki generowane automatycznie przez skrypt [`benchmark/scripts/jmeter-data.sh`](file:///home/user/projekty/badanie/benchmark/scripts/jmeter-data.sh) z aktualnego stanu bazy danych i umieszczane w katalogu [`benchmark/jmeter/data/`](file:///home/user/projekty/badanie/benchmark/jmeter/data/):
+Pliki generowane automatycznie przez skrypt [`benchmark/scripts/jmeter-data.sh`](file:///home/wojtek/projekty/badanie/benchmark/scripts/jmeter-data.sh) ze stanu bazy wzorcowej `laravel_app_template` i umieszczane w katalogu [`benchmark/jmeter/data/`](file:///home/wojtek/projekty/badanie/benchmark/jmeter/data/):
 
 1. **`ranges.properties`:**
    Zawiera granice kluczy głównych oraz maksymalne numery stron dla zapytań z losowymi parametrami, co eliminuje błędy `404 Not Found` w trakcie testów:
    ```properties
-   orders.max=10000
-   dishes.max=120
-   tables.max=30
-   menu_items.pages.max=12
-   orders.pages.max=1000
+   ep1.pages=10
+   ep2.pages=23
+   ep3.pages=5000
+   orders.max=100000
+   dishes.max=500
+   tables.max=200
+   ep9.start=2026-10-21
    ```
 2. **`available_menu_items.csv`:**
-   Lista identyfikatorów dań (`dish_id`), dla których flaga `is_available = true`. Używana przez generator obciążenia w planie EP7 (`POST /orders`), aby symulować wyłącznie poprawne pozycje menu podlegające zamówieniu.
+   Lista identyfikatorów pozycji menu (`id` z tabeli `menu_items`), dla których flaga `is_available = true` (445 pozycji). Używana przez generator obciążenia w planie `EP7` (`POST /api/orders`), aby symulować wyłącznie prawidłowe zamówienia.
 
 ---
 
-### Raporty inspekcji ORM
+### Raporty inspekcji ORM i eksperymenty pilotażowe
 
-Pliki diagnostyczne generowane podczas testów dymnych (*smoke tests*) weryfikujące poprawność i symetrię zapytań SQL generowanych przez frameworki:
+Pliki diagnostyczne i eksploracyjne przechowywane w `benchmark/results/smoke/` oraz `benchmark/results/s3/` (pełne zestawienie ich wyników znajduje się w pliku [`results.md`](file:///home/wojtek/projekty/badanie/results.md)):
 
 1. **`results/smoke/sql-compare-<framework>.txt`:**
-   Generowany przez [`benchmark/scripts/sql-compare.sh`](file:///home/user/projekty/badanie/benchmark/scripts/sql-compare.sh). Raportuje zrzut z widoku `pg_stat_statements` dla każdego endpointu (liczba wywołań zapytań, całkowity czas wykonania, średni czas na zapytanie).
+   Generowany przez [`benchmark/scripts/sql-compare.sh`](file:///home/wojtek/projekty/badanie/benchmark/scripts/sql-compare.sh). Raportuje zrzut z widoku `pg_stat_statements` dla każdego endpointu (`EP1`, `EP2`, `EP2b`, `EP3`, `EP4`, `EP5`, `EP6`, `EP7`, `EP8`, `EP9`): liczbę wywołań zapytań, całkowity czas wykonania, średni czas pojedynczej instrukcji (`mean_ms`) oraz łączny czas SQL na żądanie (`ms_per_req`).
 2. **`results/s3/query-count-<framework>.txt`:**
-   Generowany przez [`benchmark/scripts/query-count.sh`](file:///home/user/projekty/badanie/benchmark/scripts/query-count.sh). Zawiera zestawienie wartości nagłówka `X-Query-Count` zwracanego przez mechanizmy profilujące aplikacji w scenariuszu S3, weryfikując wyeliminowanie problemu N+1 zapytań w obu implementacjach.
+   Generowany przez [`benchmark/scripts/query-count.sh`](file:///home/wojtek/projekty/badanie/benchmark/scripts/query-count.sh). Zawiera zestawienie wartości nagłówka `X-Query-Count` dla endpointów scenariusza S3 (`EP1`, `EP2`, `EP2b`, `EP4`, `EP6`, `EP8`).
+3. **`results/smoke/ep8-diagnostic-20261006.txt`:**
+   Szczegółowy raport porównujący zachowanie Eloquent ORM (*dirty checking*) i TypeORM (`save()` w transakcji) na endpointcie aktualizacji statusu zamówienia (`PATCH /api/orders/1/status`) przy statusie niezmienionym (`paid` $\rightarrow$ `paid`) oraz zmienionym (`paid` $\rightarrow$ `open`).
+4. **`results/smoke/s2-fpm-pilot/summary.csv`:**
+   Wyniki 24-przebiegowego eksperymentu strojenia liczby procesów roboczych PHP-FPM (`pm.max_children` $\in \{4, 8, 16, 24, 32, 40\}$) dla endpointów `EP3` i `EP7` przy współbieżności 500 i 1000 VU, generowane przez skrypt [`benchmark/scripts/run-fpm-pilot.py`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-fpm-pilot.py).
