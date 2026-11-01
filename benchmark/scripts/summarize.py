@@ -28,39 +28,32 @@ Definitions (Sections 3.3, 3.5 and 3.6 of the methodology):
   every endpoint that set requires, (a) X(N)/(N·X(1)) >= 0.80, (b) application
   CPU is below 80% of its container limit, and (c) PostgreSQL CPU is below 80%
   of its container limit. The set is the longest prefix of {1, 2, 4, 10} that
-  passes. H1 uses one set over EP1 and EP8. H3 uses one set per pair
-  (EP1, EP_k).
+  passes. H1 uses one set over EP1 and EP5. H3 uses one set per pair
+  (EP2b, EP_k).
 - Two secondary figures are printed beside the verdict and do not enter it.
   Little's law mean is concurrency divided by throughput (N/RPS). CPU time per
   request is the application container's CPU, as a fraction of one core, divided
   by throughput.
 """
 
-import csv
-import json
 import math
 import random
-import statistics
-import subprocess
 import sys
-from collections import defaultdict
 from pathlib import Path
 from summarize_common import (
     BOOTSTRAP_SEED, H1_ENDPOINTS, H1_ERROR_LIMIT_PCT, H1_LIMIT_PCT,
-    H2_SATURATION_PCT, H2_SLOPE_MIN_VU, H3_CONSISTENCY_VU, H3_ENDPOINTS,
-    H3_PRIMARY_ENDPOINT, H3_REFERENCE, H3_DEFAULT_REFERENCE, H3_THRESHOLD_MS,
-    H3_VERDICT_VU, JMETER_CPU_FLAG_PCT,
-    LOWLOAD_CPU_SHARE_MAX,
+    H2_SATURATION_PCT, H2_SLOPE_MIN_VU, H3_CONSISTENCY_VU, H3_DEFAULT_REFERENCE,
+    H3_ENDPOINTS, H3_PRIMARY_ENDPOINT, H3_REFERENCE, H3_THRESHOLD_MS,
+    H3_VERDICT_VU, JMETER_CPU_FLAG_PCT, LOWLOAD_CPU_SHARE_MAX,
     LOWLOAD_SCALING_MIN, PLANNED_VU, ROOT,
-    d_k, fmt_number, fmt_ratio, group_values, metric_contrast, paired_summary,
-    signed_gap, summary_index,
+    d_k, fmt_number, fmt_ratio, group_values, metric_contrast, summary_index,
 )
 from summarize_data import (
-    aggregate, coerce_run_row, load_runs, load_s1_rows, summarise_run, write_csv,
+    aggregate, load_runs, write_csv,
 )
 from summarize_stats import (
-    bootstrap_d_k, bootstrap_rel_delta, bootstrap_slope_ratio, percentile,
-    percentile_ci, ratio, rel_delta_pct, slope,
+    bootstrap_d_k, bootstrap_rel_delta, bootstrap_slope_ratio,
+    ratio, rel_delta_pct, slope,
 )
 
 def prefix_of_planned(passing):
@@ -136,7 +129,6 @@ def pair_levels(members):
     if list(members[:2]) == [H3_CONSISTENCY_VU, H3_VERDICT_VU]:
         return H3_VERDICT_VU, H3_CONSISTENCY_VU
     return None, None
-
 
 
 def flag_jmeter_cpu(summary):
@@ -262,8 +254,6 @@ def h1_table(summary, rows):
     print(f"H1 verdict: {verdict}{extra}")
 
 
-
-
 def saturation_vu(by_vu):
     """Smallest VU whose median error rate exceeds 5%, or None when none does."""
     for vu in sorted(by_vu):
@@ -272,10 +262,8 @@ def saturation_vu(by_vu):
     return None
 
 
-
-
 def h2_table(summary, rows):
-    index = {(r["mode"], r["endpoint"], int(r["users"]), r["framework"]): r for r in summary}
+    index = summary_index(summary)
     groups = sorted({(mode, endpoint) for mode, endpoint, _, _ in index})
     print(f"\nH2: bootstrap 95% CI for slope ratio s_L/s_N on VU >= {H2_SLOPE_MIN_VU}; "
           "this is the primary criterion")
@@ -340,24 +328,6 @@ def h2_table(summary, rows):
               f"saturation {fmt_sat(sat_l)} / {fmt_sat(sat_n)}, errors {err_s} (supplementary)")
 
 
-def git_hash():
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"],
-            cwd=ROOT.parent.parent,
-            text=True,
-            stderr=subprocess.DEVNULL,
-        ).strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return "unknown"
-
-
-
-
-
-
-
-
 def h3_table(summary, rows):
     y = H3_THRESHOLD_MS
     print(f"H3 practical threshold Y = {y:.1f} ms")
@@ -390,7 +360,7 @@ def h3_table(summary, rows):
     index = summary_index(summary)
     rng = random.Random(BOOTSTRAP_SEED)
     print("\nH3: D_k = (p95_L(k) − p95_N(k)) − (p95_L(ref) − p95_N(ref)), medians of repetitions; "
-          "ref = EP2b for EP2 (same-table control), EP1 otherwise")
+          "ref = EP2b (same-table control for all S3 endpoints)")
     header = (f"{'mode':9} {'endpoint':8} {'VU':>4} {'p95 L':>8} {'p95 N':>8} {'L/N':>6} "
               f"{'D_k':>8} {'CI lo':>8} {'CI hi':>8}  tag")
     print(header)
@@ -508,11 +478,11 @@ def summarise_scenario(name):
     print(f"{len(summary)} groups -> {scenario_dir / 'summary.csv'}")
 
     base_name = Path(name).name.lower()
-    if base_name == "s1" or base_name.startswith("s1-") or "s1" in base_name:
+    if "s1" in base_name:
         h1_table(summary, rows)
-    elif base_name == "s2" or base_name.startswith("s2-") or "s2" in base_name:
+    elif "s2" in base_name:
         h2_table(summary, rows)
-    elif base_name == "s3" or base_name.startswith("s3-") or "s3" in base_name:
+    elif "s3" in base_name:
         h3_table(summary, rows)
         print_query_counts(scenario_dir)
     flag_jmeter_cpu(summary)

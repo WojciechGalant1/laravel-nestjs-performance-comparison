@@ -18,11 +18,12 @@
 #
 # Environment (defaults follow the methodology):
 #   ENDPOINTS / USERS override the scenario defaults
-#   REPS=10 WARMUP=120 DURATION=180 RAMPUP=10
-#   S1 defaults: ENDPOINTS="EP1 EP5" USERS="1 2 4 10"
-#   S2 defaults: ENDPOINTS="EP3 EP7" USERS="200 500 1000"
-#   S3 defaults: ENDPOINTS="EP1 EP2 EP2b EP4 EP6" USERS="1 2 4 10" (EP2b = same-table control for H3, needed at 1 2 only)
+#   REPS=10 WARMUP=60/120 DURATION=60/120 RAMPUP=10
+#   S1 defaults: ENDPOINTS="EP1 EP5" USERS="1 2 4 10" WARMUP=60 DURATION=60
+#   S2 defaults: ENDPOINTS="EP3 EP7" USERS="200 500 1000" WARMUP=120 DURATION=120
+#   S3 defaults: ENDPOINTS="EP1 EP2 EP2b EP4 EP6" USERS="1 2 4 10" WARMUP=60 DURATION=60
 #   DB_POOL_SIZE=1   NestJS control run; results go to results/s2-pool1/
+#   PM_MAX_CHILDREN=8 Laravel control run; results go to results/s2-fpm8/
 #   INTERLEAVE_SEED  integer used only in `both` mode
 #
 # Output: results/<scenario>/<framework>/<endpoint>/vu<N>/rep<NN>/
@@ -392,6 +393,7 @@ if [ "$target" != both ]; then
         exit 1
     fi
     [ "$target" = nestjs ] && align_nestjs_pool
+    [ "$target" = laravel ] && align_laravel_workers
 else
     running postgres || { echo "postgres is not running: docker compose up -d --wait postgres" >&2; exit 1; }
 fi

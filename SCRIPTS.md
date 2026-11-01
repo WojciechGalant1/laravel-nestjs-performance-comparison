@@ -113,16 +113,16 @@ Niskopoziomowy silnik wykonawczy odpowiedzialny za realizację pojedynczego scen
 
 #### Kluczowe Funkcje i Mechanizmy:
 
-1. **Izolacja Stosów Kontenerów ([`ensure_stack`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L81-L92)):**
+1. **Izolacja Stosów Kontenerów ([`ensure_stack`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L82-L93)):**
    Dba o to, aby w danym momencie działał **wyłącznie jeden badany stos** aplikacji (`laravel` lub `nestjs`). Kontener drugiego frameworka oraz powiązany serwer proxy Nginx są zatrzymywane, co eliminuje rywalizację procesów o rdzenie CPU i pamięć RAM.
 
-2. **Dynamiczne Dostosowanie Puli Połączeń i Workerów ([`align_nestjs_pool`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L94-L108) oraz [`align_laravel_workers`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L110-L126)):**
+2. **Dynamiczne Dostosowanie Puli Połączeń i Workerów ([`align_nestjs_pool`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L95-L109) oraz [`align_laravel_workers`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L111-L127)):**
    Weryfikuje i dynamicznie aktualizuje zmienną `DB_POOL_SIZE` w kontenerze NestJS (domyślnie `10`, w kontroli wrażliwości `1` $\rightarrow$ katalog `results/s2-pool1/`) oraz zmienną `PM_MAX_CHILDREN` w kontenerze Laravel (domyślnie `4`, w kontroli wrażliwości `8` $\rightarrow$ katalog `results/s2-fpm8/`), odtwarzając kontener w razie rozbieżności.
 
-3. **Algorytm Przeplotu ([`framework_order`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L204-L218)):**
+3. **Algorytm Przeplotu ([`framework_order`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L211-L221)):**
    Kolejność uruchamiania frameworków (`laravel`, `nestjs`) w ramach każdego powtórzenia ($n=1..10$) jest pseudolosowo ustalana za pomocą ziarna `INTERLEAVE_SEED` (domyślnie `20261002`) oraz numeru powtórzenia. Zapobiega to faworyzowaniu technologii przez nagrzewanie procesora (*thermal throttling*) lub dryft tła systemu operacyjnego.
 
-4. **Cykl Pojedynczego Przebiegu ([`run_one`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L220-L390)):**
+4. **Cykl Pojedynczego Przebiegu ([`run_one`](file:///home/wojtek/projekty/badanie/benchmark/scripts/run-scenario.sh#L227-L382)):**
    - Wywołanie [`scripts/db-reset.sh`](file:///home/wojtek/projekty/badanie/benchmark/scripts/db-reset.sh) celem przywrócenia czystego stanu bazy danych.
    - **Faza Rozgrzewki (Warm-Up):** 60 s dla S1 i S3; 120 s dla S2 (próbki odrzucane z właściwych wyników).
    - **Próbkowanie Zasobów (`start_stats`):** W tle uruchamiany jest proces próbkujący `docker stats` (CPU%, RAM) do pliku `stats.csv` z częstotliwością $\sim 0.5$ s.
@@ -240,7 +240,7 @@ Główny moduł analityczny przetwarzający surowe logi JMeter (`results.jtl`) o
 - **[`summarize_common.py`](file:///home/wojtek/projekty/badanie/benchmark/scripts/summarize_common.py):**
   - Definicje stałych progowych: `H1_LIMIT_PCT = 15.0`, `H1_ENDPOINTS = ("EP1", "EP5")`, `H3_PRIMARY_ENDPOINT = "EP2"`, `H3_DEFAULT_REFERENCE = "EP2b"`, `H3_THRESHOLD_MS = 2.0`, `LOWLOAD_SCALING_MIN = 0.80`, `LOWLOAD_CPU_SHARE_MAX = 0.80`.
   - Parametry procedury bootstrap: `BOOTSTRAP_SEED = 20261002`, `BOOTSTRAP_N = 10_000`.
-  - Klasa [`FrameworkPair`](file:///home/wojtek/projekty/badanie/benchmark/scripts/summarize_common.py#L67-L82) oraz funkcje obliczające luki opóźnień (`signed_gap`) i kontrasty Difference-in-Differences (`d_k`, `metric_contrast`).
+  - Klasa [`FrameworkPair`](file:///home/wojtek/projekty/badanie/benchmark/scripts/summarize_common.py#L58-L72) oraz funkcje obliczające luki opóźnień (`signed_gap`) i kontrasty Difference-in-Differences (`d_k`, `metric_contrast`).
 
 - **[`summarize_data.py`](file:///home/wojtek/projekty/badanie/benchmark/scripts/summarize_data.py):**
   - Logika parsowania surowych plików CSV z logów JMetera (`results.jtl`) oraz logów telemetrycznych Docker (`stats.csv`).

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Execute one deterministic write request for EP7, EP8 and EP9.
+# Execute one deterministic write request for EP7, EP5 and EP9.
 # The output excludes generated ids and timestamps so two framework runs can
 # be compared after resetting their databases from the same template.
 set -euo pipefail

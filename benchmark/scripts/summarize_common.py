@@ -55,15 +55,6 @@ def signed_gap(lar_p95, nest_p95):
 def d_k(lar_k, nest_k, lar_1, nest_1):
     return signed_gap(lar_k, nest_k) - signed_gap(lar_1, nest_1)
 
-def sensitivity_contrast(lar_k, nest_k, lar_1, nest_1):
-    signed_k = signed_gap(lar_k, nest_k)
-    signed_1 = signed_gap(lar_1, nest_1)
-    return {
-        "signed_k": signed_k,
-        "signed_1": signed_1,
-        "signed_d": signed_k - signed_1,
-    }
-
 class FrameworkPair:
     def __init__(self, laravel, nestjs):
         self.laravel = laravel
@@ -88,7 +79,7 @@ def paired_summary(index, mode, endpoint, users):
     return FrameworkPair(laravel, nestjs)
 
 
-def metric_contrast(index, mode, endpoint, users, metric, reference="EP1"):
+def metric_contrast(index, mode, endpoint, users, metric, reference=H3_DEFAULT_REFERENCE):
     endpoint_pair = paired_summary(index, mode, endpoint, users)
     baseline_pair = paired_summary(index, mode, reference, users)
     if endpoint_pair is None or baseline_pair is None:

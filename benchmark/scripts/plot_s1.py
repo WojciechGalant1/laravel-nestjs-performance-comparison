@@ -73,7 +73,7 @@ def plot_throughput(data):
     nest_sd_ep1 = [data[('EP1', u, 'nestjs')]['rps_sd'] for u in vu_levels]
 
     ax1.bar(x - width/2, lar_rps_ep1, width, yerr=lar_sd_ep1, capsize=4, label='Laravel (PHP-FPM)', color=color_lar, edgecolor='black', linewidth=0.6)
-    ax1.bar(x + width/2, nest_rps_ep1, width, yerr=nest_sd_ep1, capsize=4, label='NestJS (Fastify)', color=color_nest, edgecolor='black', linewidth=0.6)
+    ax1.bar(x + width/2, nest_rps_ep1, width, yerr=nest_sd_ep1, capsize=4, label='NestJS (PM2)', color=color_nest, edgecolor='black', linewidth=0.6)
 
     ax1.set_title('(a) EP1: Single-Table Read (GET)')
     ax1.set_xlabel('Concurrency Level (Virtual Users)')
@@ -198,7 +198,7 @@ def plot_resources(data):
     mem_nest = [data[('EP1', 1, 'nestjs')]['mem_pk'], data[('EP5', 1, 'nestjs')]['mem_pk']]
 
     ax2.bar(x - width/2, mem_lar, width, label='Laravel', color=color_lar, edgecolor='black', linewidth=0.6)
-    ax2.bar(x + width/2, nest_mem := mem_nest, width, label='NestJS', color=color_nest, edgecolor='black', linewidth=0.6)
+    ax2.bar(x + width/2, mem_nest, width, label='NestJS', color=color_nest, edgecolor='black', linewidth=0.6)
     ax2.set_title('(b) Memory Footprint: Peak RAM (1 VU)')
     ax2.set_ylabel('Peak Memory Usage (MiB)')
     ax2.set_xticks(x)

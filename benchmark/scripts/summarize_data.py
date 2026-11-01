@@ -5,9 +5,8 @@ import csv
 import json
 import statistics
 from collections import defaultdict
-from pathlib import Path
 
-from summarize_common import ROOT, SETUP_LABELS, UNITS
+from summarize_common import SETUP_LABELS, UNITS
 from summarize_stats import percentile
 
 def to_mib(value):
@@ -172,13 +171,3 @@ def coerce_run_row(row):
         if key in out and out[key] not in ("", None):
             out[key] = cast(out[key])
     return out
-
-def load_s1_rows():
-    """Prefer results/s1/runs.csv (the freeze input named in the methodology)."""
-    csv_path = ROOT / "s1" / "runs.csv"
-    if csv_path.exists():
-        with csv_path.open(newline="") as fh:
-            rows = [coerce_run_row(row) for row in csv.DictReader(fh)]
-        if rows:
-            return rows
-    return load_runs(ROOT / "s1")

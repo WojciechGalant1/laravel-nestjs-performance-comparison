@@ -5,7 +5,7 @@ import math
 import random
 import statistics
 
-from summarize_common import BOOTSTRAP_N, d_k, group_values
+from summarize_common import BOOTSTRAP_N, H3_DEFAULT_REFERENCE, d_k, group_values
 
 def percentile(sorted_values, p):
     rank = max(1, math.ceil(p / 100 * len(sorted_values)))
@@ -34,7 +34,7 @@ def bootstrap_rel_delta(lar_vals, nest_vals, rng):
         stats.append(rel_delta_pct(lar, nest))
     return percentile_ci(stats)
 
-def bootstrap_d_k(rows, mode, endpoint, users, rng, reference="EP1"):
+def bootstrap_d_k(rows, mode, endpoint, users, rng, reference=H3_DEFAULT_REFERENCE):
     groups = {
         "l1": group_values(rows, mode, reference, users, "laravel"),
         "n1": group_values(rows, mode, reference, users, "nestjs"),
