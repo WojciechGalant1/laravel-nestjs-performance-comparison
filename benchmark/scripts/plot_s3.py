@@ -93,11 +93,15 @@ def load_runs():
 
 
 def compute_contrasts(rows, users=2):
-    """Return [(label, colour, point, lo, hi)] for contrasts whose inputs are measured."""
+    """Return [(label, colour, point, lo, hi)] using the exact sequential RNG stream of summarize.py."""
+    rng = random.Random(BOOTSTRAP_SEED)
+    by_ep_vu = {}
+    for ep, ref, _, _ in CONTRASTS:
+        for u in (1, 2):
+            by_ep_vu[(ep, u)] = bootstrap_d_k(rows, 'isolated', ep, u, rng, reference=ref)
     out = []
     for endpoint, reference, label, colour in CONTRASTS:
-        rng = random.Random(BOOTSTRAP_SEED)
-        res = bootstrap_d_k(rows, 'isolated', endpoint, users, rng, reference=reference)
+        res = by_ep_vu.get((endpoint, users))
         if res is None:
             continue
         point, lo, hi = res
@@ -230,9 +234,28 @@ def plot_s3_combined_article(data, rows):
     save(fig, 'fig3_s3_relational_convergence')
 
 
+def plot_s3_article_single_panels(data, rows):
+    """Generate standalone single-panel figures (Fig 2a and Fig 2b) for 2-column article layout."""
+    # Fig 2a: Relational Contrast D_k (2 VU)
+    fig2a, ax1 = plt.subplots(1, 1, figsize=(4.6, 3.4))
+    draw_contrast_panel(ax1, compute_contrasts(rows, 2), 'Relational Contrast $D_k$ (2 VU)')
+    ax1.set_xticklabels([c[0] for c in compute_contrasts(rows, 2)], fontsize=9)
+    ax1.legend(loc='lower left', frameon=True, fontsize=8.5)
+    fig2a.tight_layout()
+    save(fig2a, 'fig2a_s3_contrast')
+
+    # Fig 2b: EP6 Aggregation Relative Latency Gap
+    fig2b, ax2 = plt.subplots(1, 1, figsize=(4.6, 3.4))
+    draw_ep6_panel(ax2, data)
+    ax2.set_title('EP6 Aggregation: Tail Latency ($p_{95}$)')
+    fig2b.tight_layout()
+    save(fig2b, 'fig2b_s3_ep6')
+
+
 if __name__ == '__main__':
     data = load_summary()
     rows = load_runs()
     plot_s3_relational_contrast(data, rows)
     plot_s3_runtime_share(data)
     plot_s3_combined_article(data, rows)
+    plot_s3_article_single_panels(data, rows)

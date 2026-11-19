@@ -142,7 +142,7 @@ def draw_pool_sensitivity_panel(ax, data):
 
     # Plot Default configurations first (consistent with other figures)
     ax.plot(pool_vu, nest_pool10, 'o-', color=color_nest, lw=1.8, label='NestJS (Pool=10, 40 conn)')
-    ax.plot(pool_vu, lar_ep3, 's--', color=color_lar, lw=1.8, label='Laravel (FPM, 4 conn)')
+    ax.plot(pool_vu, lar_ep3, 's-', color=color_lar, lw=1.8, label='Laravel (FPM, 4 conn)')
 
     # Plot Sensitivity variants
     ax.plot(pool_vu, nest_pool1, '^:', color=color_nest_pool1, lw=1.8, label='NestJS (Pool=1, 4 conn)')
@@ -237,9 +237,56 @@ def plot_s2_combined_article(data):
     plt.close(fig)
     print(f"Generated: {png_path} & {svg_path}")
 
+def plot_s2_article_single_panels(data):
+    """Generate standalone single-panel figures (Fig 1a and Fig 1b) for 2-column article layout."""
+    vu_levels = [200, 500, 1000]
+    color_lar = '#d9534f'  # Muted Crimson
+    color_nest = '#2b6cb0' # Deep Slate Blue
+
+    # Fig 1a: Tail Latency p95 vs VU
+    fig1a, ax1 = plt.subplots(1, 1, figsize=(4.6, 3.4))
+    lar_p95_ep3 = [data[('EP3', u, 'laravel')]['p95'] for u in vu_levels]
+    nest_p95_ep3 = [data[('EP3', u, 'nestjs')]['p95'] for u in vu_levels]
+    lar_p95_ep7 = [data[('EP7', u, 'laravel')]['p95'] for u in vu_levels]
+    nest_p95_ep7 = [data[('EP7', u, 'nestjs')]['p95'] for u in vu_levels]
+
+    ax1.plot(vu_levels, nest_p95_ep3, 'o-', color=color_nest, label='NestJS: EP3 (Read 2 rel)')
+    ax1.plot(vu_levels, lar_p95_ep3, 'o--', color=color_lar, label='Laravel: EP3 (Read 2 rel)')
+    ax1.plot(vu_levels, lar_p95_ep7, 's--', color=color_lar, alpha=0.7, label='Laravel: EP7 (Write tx)')
+    ax1.plot(vu_levels, nest_p95_ep7, 's-', color=color_nest, alpha=0.7, label='NestJS: EP7 (Write tx)')
+
+    ax1.set_title('Tail Latency ($p_{95}$) Degradation')
+    ax1.set_xlabel('Concurrency Level (Virtual Users)')
+    ax1.set_ylabel('Tail Latency $p_{95}$ (ms)')
+    ax1.set_xticks(vu_levels)
+    ax1.set_ylim(0, 9000)
+    ax1.legend(loc='upper left', frameon=True, fontsize=8.5)
+
+    fig1a.tight_layout()
+    for ext in ('png', 'svg'):
+        p = os.path.join(OUTPUT_DIR, f'fig1a_s2_latency.{ext}')
+        fig1a.savefig(p, dpi=300) if ext == 'png' else fig1a.savefig(p)
+    plt.close(fig1a)
+    print(f"Generated: fig1a_s2_latency.png & .svg")
+
+    # Fig 1b: Connection pool & worker sensitivity on EP3
+    fig1b, ax2 = plt.subplots(1, 1, figsize=(4.6, 3.4))
+    draw_pool_sensitivity_panel(ax2, data)
+    ax2.set_title('Connection Pool & Worker Sensitivity (EP3)')
+    ax2.legend(loc='upper right', frameon=True, fontsize=8.5, framealpha=0.9)
+
+    fig1b.tight_layout()
+    for ext in ('png', 'svg'):
+        p = os.path.join(OUTPUT_DIR, f'fig1b_s2_pool.{ext}')
+        fig1b.savefig(p, dpi=300) if ext == 'png' else fig1b.savefig(p)
+    plt.close(fig1b)
+    print(f"Generated: fig1b_s2_pool.png & .svg")
+
+
 if __name__ == '__main__':
     data = load_summary()
     plot_s2_throughput_latency(data)
     plot_s2_bottlenecks_and_pool(data)
     plot_s2_combined_article(data)
+    plot_s2_article_single_panels(data)
 
