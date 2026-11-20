@@ -128,10 +128,6 @@ def draw_pool_sensitivity_panel(ax, data):
     lar_ep3 = [data[('EP3', u, 'laravel')]['rps'] for u in pool_vu]
     nest_pool10 = [data[('EP3', u, 'nestjs')]['rps'] for u in pool_vu]
 
-    # At 200 VU, 8 workers has at least baseline 4-worker throughput if not separately measured
-    if fpm8_data and ('EP3', 200, 'laravel') not in fpm8_data:
-        fpm8_data[('EP3', 200, 'laravel')] = {'rps': lar_ep3[0]}
-
     if pool1_data and all(('EP3', u, 'nestjs') in pool1_data for u in pool_vu):
         nest_pool1 = [pool1_data[('EP3', u, 'nestjs')]['rps'] for u in pool_vu]
     else:
@@ -272,13 +268,22 @@ def plot_s2_article_single_panels(data):
     # Fig 1b: Connection pool & worker sensitivity on EP3
     fig1b, ax2 = plt.subplots(1, 1, figsize=(4.6, 3.4))
     draw_pool_sensitivity_panel(ax2, data)
-    ax2.set_title('Connection Pool & Worker Sensitivity (EP3)')
+    ax2.set_title('Connection Pool & Worker Sensitivity on EP3')
     ax2.legend(loc='upper right', frameon=True, fontsize=8.5, framealpha=0.9)
 
     fig1b.tight_layout()
     for ext in ('png', 'svg'):
         p = os.path.join(OUTPUT_DIR, f'fig1b_s2_pool.{ext}')
         fig1b.savefig(p, dpi=300) if ext == 'png' else fig1b.savefig(p)
+
+    # Presentation copy without EP3 code in title
+    prez_dir = os.path.join(os.path.dirname(OUTPUT_DIR), 'prezentacja')
+    if os.path.isdir(prez_dir):
+        ax2.set_title('Connection Pool & Worker Sensitivity')
+        fig1b.tight_layout()
+        fig1b.savefig(os.path.join(prez_dir, 'fig1b_s2_pool_prez.png'), dpi=300)
+        print("Generated: prezentacja/fig1b_s2_pool_prez.png")
+
     plt.close(fig1b)
     print(f"Generated: fig1b_s2_pool.png & .svg")
 
